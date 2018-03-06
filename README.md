@@ -1,2 +1,2 @@
-# rl_grasping
-"Uczenie głębokie w symulowanych warunkach działania robotycznego ramienia chwytnego" Master deegree work code
+# Deep learning robotic grasping arm acting in simulated envirnoment 
+## Master deegree work code
