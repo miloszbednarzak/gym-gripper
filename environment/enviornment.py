@@ -12,23 +12,26 @@ LIGHT = (170, 170, 170)
 WHITE = (255, 255, 255)
 
 # gripper_joints = [[x-4,y-18],[x-6,y-14],[x-6,y-4],[x, y],[x+6,y-4],[x+6,y-14],[x+4,y-18]]
-grip_positions_x = 100
-grip_positions_y = 195
+
+# Gripper wrist position
+wrist_position_x = 100
+wrist_position_y = 195
 
 gripper_x_velocity = 0
 gripper_y_velocity = 0
 
 
-def gripper_joints(grip_pos_x, grip_pos_y):
-    joints_loc = [[grip_pos_x - 4, grip_pos_y - 18], [grip_pos_x - 6, grip_pos_y - 14],
-                 [grip_pos_x - 6, grip_pos_y - 4], [grip_pos_x, grip_pos_y],
-                 [grip_pos_x + 6, grip_pos_y - 4], [grip_pos_x + 6, grip_pos_y-14],
-                 [grip_pos_x + 4, grip_pos_y - 18]]
+def gripper_joints(wrist_pos_x, wrist_pos_y):
+    """ Define what are gripper joints positions based on position of """
+    joints_loc = [[wrist_pos_x - 4, wrist_pos_y - 18], [wrist_pos_x - 6, wrist_pos_y - 14],
+                 [wrist_pos_x - 6, wrist_pos_y - 4], [wrist_pos_x, wrist_pos_y],
+                 [wrist_pos_x + 6, wrist_pos_y - 4], [wrist_pos_x + 6, wrist_pos_y-14],
+                 [wrist_pos_x + 4, wrist_pos_y - 18]]
     return joints_loc
 
 
 def draw_gripper(gripper_joints):
-    pygame.draw.lines(screen, LIGHT, False, gripper_joints, 2)
+    pygame.draw.lines(screen, LIGHT, False, gripper_joints, 3)
 
 
 def draw_circle(position, size):
@@ -78,18 +81,17 @@ while done == False:
                 gripper_x_velocity = 0
 
     # --LOGIC--
-    grip_positions_x = gripper_x_velocity
-    grip_positions_y = gripper_y_velocity
+    wrist_position_x += gripper_x_velocity
+    wrist_position_y += gripper_y_velocity
 
     # --DRAWING--
 
-    # Clear
-    screen.fill(WHITE)
+    screen.fill(WHITE)  # Clear screen
 
     pygame.draw.rect(screen, BLACK, board)
 
     draw_circle(circle_position, 5)
-    draw_gripper(gripper_joints(grip_positions_x, grip_positions_y))
+    draw_gripper(gripper_joints(wrist_position_x, wrist_position_y))
 
     # UPDATE SCREEN WITH WHAT WAS DRAWN
     pygame.display.flip()
