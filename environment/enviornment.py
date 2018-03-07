@@ -61,14 +61,18 @@ while done == False:
         if event.type == pygame.QUIT:
             done = True
         elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_a:
+            if event.key == pygame.K_LEFT:
+                print('Key left')
                 gripper_x_velocity = -3
-            if event.key == pygame.K_d:
+            if event.key == pygame.K_RIGHT:
                 gripper_x_velocity = 3
-            if event.key == pygame.K_w:
+                print('Key right')
+            if event.key == pygame.K_UP:
                 gripper_y_velocity = -3
-            if event.key == pygame.K_s:
+                print('Key up')
+            if event.key == pygame.K_DOWN:
                 gripper_x_velocity = 3
+                print('Key down')
 
         elif event.type == pygame.KEYUP:
             if event.key == pygame.K_a:
