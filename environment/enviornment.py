@@ -27,14 +27,17 @@ def gripper_joints(wrist_pos_x, wrist_pos_y, joints=5):
 
     if joints == 4:
         joints_loc = [
-
+            [wrist_pos_x - 2, wrist_pos_y - 14],   # ____________
+            [wrist_pos_x - 5, wrist_pos_y - 14],  # |  ________  |
+            [wrist_pos_x - 5, wrist_pos_y],      # _| |        |_|
+            [wrist_pos_x, wrist_pos_y],          # _| |         _
+            [wrist_pos_x + 5, wrist_pos_y],       # | |________| |
+            [wrist_pos_x + 5, wrist_pos_y - 14],  # |____________|
+            [wrist_pos_x + 2, wrist_pos_y - 14]
         ]
+
     return joints_loc
 
-#   _______
-#  |       |
-# -|
-#  |_______|
 
 def draw_gripper(joints_positions):
 
@@ -79,7 +82,7 @@ gripper_y_velocity = 0
 size = [200, 200]  # [width, height]
 
  # set size of action space
-action_space = {
+define_actions = {
     0: 'GO UP',
     1: 'GO DOWN',
     2: 'GO LEFT',
@@ -89,6 +92,7 @@ action_space = {
     # 7: 'TIGHTEN FINGERS',
     # 8: 'EXTEND FINGERS'
 }
+action_space = list(define_actions.keys())
 
  # set size of observation space alias board
 board = [20, 20, 160, 160]  # [x, y, width, height]
@@ -120,7 +124,7 @@ while not done:
 
     # --LOGIC--
 
-    action = random.sample(action_space.keys(), 1)[0]  # get random action from action space dictionary
+    action = random.choice(action_space)  # get random action from action space dictionary
     print(action)
     if action == 0:
         gripper_y_velocity = -3
@@ -149,6 +153,8 @@ while not done:
     wrist_position_x += gripper_x_velocity
     wrist_position_y += gripper_y_velocity
 
+    gripper_x_velocity, gripper_y_velocity = 0, 0
+
     # --DRAWING--
 
     screen.fill(WHITE)  # Clear screen
@@ -156,7 +162,7 @@ while not done:
     pygame.draw.rect(screen, BLACK, board)
 
     draw_circle(circle_position, 5)
-    draw_gripper(gripper_joints(wrist_position_x, wrist_position_y))
+    draw_gripper(gripper_joints(wrist_position_x, wrist_position_y, joints=4))
 
     # UPDATE SCREEN WITH WHAT WAS DRAWN
     pygame.display.flip()
