@@ -3,29 +3,38 @@ import random
 # random.seed(108)
 
 
-def gripper_joints(wrist_pos_x, wrist_pos_y):
+def gripper_joints(wrist_pos_x, wrist_pos_y, joints=5):
 
     """
     Define what are gripper joints coordinates based on position of gripper wrist.
-    Joints coorditates when gripper is positioned in initial position:
+    joints=5, Joints coorditates when gripper is positioned in initial position:
     [[x-4,y-18],[x-6,y-14],[x-6,y-4],[x, y],[x+6,y-4],[x+6,y-14],[x+4,y-18]]
 
     :param wrist_pos_x: co-ordinates of wrist on x-axis
     :param wrist_pos_y: co-ordinates of wrist on y-axis
     :return: coordinates od joints
     """
+    if joints == 5:
+        joints_loc = [                                # _________
+            [wrist_pos_x - 4, wrist_pos_y - 18],     # / ________\
+            [wrist_pos_x - 6, wrist_pos_y - 14],    # //         \\
+            [wrist_pos_x - 6, wrist_pos_y - 4],    # // left finger co-ordinates
+            [wrist_pos_x, wrist_pos_y],           # ||  wrist position
+            [wrist_pos_x + 6, wrist_pos_y - 4],    # \\ right finger co-ordinates
+            [wrist_pos_x + 6, wrist_pos_y-14],      # \\_________//
+            [wrist_pos_x + 4, wrist_pos_y - 18]      # \_________/
+        ]
 
-    joints_loc = [                                # _________
-        [wrist_pos_x - 4, wrist_pos_y - 18],     # / ________\
-        [wrist_pos_x - 6, wrist_pos_y - 14],    # //         \\
-        [wrist_pos_x - 6, wrist_pos_y - 4],    # // left finger co-ordinates
-        [wrist_pos_x, wrist_pos_y],           # ||  wrist position
-        [wrist_pos_x + 6, wrist_pos_y - 4],    # \\ right finger co-ordinates
-        [wrist_pos_x + 6, wrist_pos_y-14],      # \\_________//
-        [wrist_pos_x + 4, wrist_pos_y - 18]      # \_________/
-    ]
+    if joints == 4:
+        joints_loc = [
+
+        ]
     return joints_loc
 
+#   _______
+#  |       |
+# -|
+#  |_______|
 
 def draw_gripper(joints_positions):
 
