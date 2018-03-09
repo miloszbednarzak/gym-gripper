@@ -1,9 +1,30 @@
 import pygame
 import random
 # random.seed(108)
+import numpy as np
 
 
-def gripper_joints(wrist_pos_x, wrist_pos_y, joints=5):
+class Circle:
+
+    """
+    Draw dark colored circle of some size in some position.
+
+    :param position: co-ordinates of circle center
+    :param circle_size: size of circle
+    :param color: color of circle in RGB
+    """
+
+    def __init__(self, color, position, circle_size):
+        self.position = position
+        self.circle_size = circle_size
+        self.color = color
+
+    def display(self):
+
+        pygame.draw.circle(screen, self.color, self.position, self.circle_size)
+
+
+class Gripper:
 
     """
     Define what are gripper joints coordinates based on position of gripper wrist.
@@ -14,57 +35,49 @@ def gripper_joints(wrist_pos_x, wrist_pos_y, joints=5):
     :param wrist_pos_y: co-ordinates of wrist on y-axis
     :return: coordinates od joints
     """
-    if joints == 5:
-        joints_loc = [                                # _________
-            [wrist_pos_x - 4, wrist_pos_y - 18],     # / ________\
-            [wrist_pos_x - 6, wrist_pos_y - 14],    # //         \\
-            [wrist_pos_x - 6, wrist_pos_y - 4],    # // left finger co-ordinates
-            [wrist_pos_x, wrist_pos_y],           # ||  wrist position
-            [wrist_pos_x + 6, wrist_pos_y - 4],    # \\ right finger co-ordinates
-            [wrist_pos_x + 6, wrist_pos_y-14],      # \\_________//
-            [wrist_pos_x + 4, wrist_pos_y - 18]      # \_________/
-        ]
 
-    if joints == 4:
-        joints_loc = [
-            [wrist_pos_x - 2, wrist_pos_y - 14],   # ____________
-            [wrist_pos_x - 5, wrist_pos_y - 14],  # |  ________  |
-            [wrist_pos_x - 5, wrist_pos_y],      # _| |        |_|
-            [wrist_pos_x, wrist_pos_y],          # _| |         _
-            [wrist_pos_x + 5, wrist_pos_y],       # | |________| |
-            [wrist_pos_x + 5, wrist_pos_y - 14],  # |____________|
-            [wrist_pos_x + 2, wrist_pos_y - 14]
-        ]
+    def __init__(self, color, wrist_pos_x, wrist_pos_y, joints=4):
+        self.color = color
+        self.wrist_pos_x = wrist_pos_x
+        self.wrist_pos_y = wrist_pos_y
+        self.joints = joints
 
-    return joints_loc
+        # if self.joints == 5:
+        #     joints_loc = [                                # _________
+        #         [self.wrist_pos_x - 4, self.wrist_pos_y - 18],     # / ________\
+        #         [self.wrist_pos_x - 6, self.wrist_pos_y - 14],    # //         \\
+        #         [self.wrist_pos_x - 6, self.wrist_pos_y - 4],    # // left finger co-ordinates
+        #         [self.wrist_pos_x, self.wrist_pos_y],           # ||  wrist position
+        #         [self.wrist_pos_x + 6, self.wrist_pos_y - 4],    # \\ right finger co-ordinates
+        #         [self.wrist_pos_x + 6, self.wrist_pos_y-14],      # \\_________//
+        #         [self.wrist_pos_x + 4, self.wrist_pos_y - 18]      # \_________/
+        #     ]
 
+        if self.joints == 4:
+            joints_loc = [
+                [self.wrist_pos_x - 2, self.wrist_pos_y - 14],   # ____________
+                [self.wrist_pos_x - 5, self.wrist_pos_y - 14],  # |  ________  |
+                [self.wrist_pos_x - 5, self.wrist_pos_y],      # _| |        |_|
+                [self.wrist_pos_x, self.wrist_pos_y],          # _| |         _
+                [self.wrist_pos_x + 5, self.wrist_pos_y],       # | |________| |
+                [self.wrist_pos_x + 5, self.wrist_pos_y - 14],  # |____________|
+                [self.wrist_pos_x + 2, self.wrist_pos_y - 14]
+            ]
 
-def draw_gripper(joints_positions):
+        self.joints_coordinates = joints_loc
 
-    """
-    Draw gripper based on joint coordinates.
+    def display(self):
+        '''
+        Display Gripper on screen
+        :return:
+        '''
 
-    :param joints_positions: co-ordinates of gripper joints
-
-    """
-    pygame.draw.lines(screen, LIGHT, False, joints_positions, 3)
-
-
-def draw_circle(position, circle_size):
-
-    """
-    Draw dark colored circle of some size in some position.
-
-    :param position: co-ordinates of circle center
-    :param circle_size: size of circle
-    """
-
-    pygame.draw.circle(screen, DARK, position, circle_size)
+        pygame.draw.lines(screen, self.color, False, self.joints_coordinates, 3)
 
 
 # Define colors
-BLACK = (  0,   0,   0)
-DARK =  ( 85,  85,  85)
+BLACK = (0, 0, 0)
+DARK = (85, 85, 85)
 LIGHT = (170, 170, 170)
 WHITE = (255, 255, 255)
 
@@ -78,10 +91,10 @@ gripper_y_velocity = 0
 
 
 # Set sizes of the screen and objects
- # set size of screen
+# set size of screen
 size = [200, 200]  # [width, height]
 
- # set size of action space
+# set size of action space
 define_actions = {
     0: 'GO UP',
     1: 'GO DOWN',
@@ -92,9 +105,9 @@ define_actions = {
     # 7: 'TIGHTEN FINGERS',
     # 8: 'EXTEND FINGERS'
 }
-action_space = list(define_actions.keys())
+action_space = np.array(list(define_actions.keys()))
 
- # set size of observation space alias board
+# set size of observation space alias board
 board = [20, 20, 160, 160]  # [x, y, width, height]
 
 circle_position = [random.randint(20, 160), random.randint(20, 160)]  # [width, height]
@@ -124,7 +137,7 @@ while not done:
 
     # --LOGIC--
 
-    action = random.choice(action_space)  # get random action from action space dictionary
+    action = np.random.choice(action_space)  # get random action from action space dictionary
     print(action)
     if action == 0:
         gripper_y_velocity = -3
@@ -139,17 +152,6 @@ while not done:
         gripper_x_velocity = 3
         print('Key right')
 
-
-    # elif event.type == pygame.KEYUP:
-    #     if event.key == pygame.K_a:
-    #         gripper_x_velocity = 0
-    #     if event.key == pygame.K_d:
-    #         gripper_x_velocity = 0
-    #     if event.key == pygame.K_w:
-    #         gripper_y_velocity = 0
-    #     if event.key == pygame.K_s:
-    #         gripper_x_velocity = 0
-
     wrist_position_x += gripper_x_velocity
     wrist_position_y += gripper_y_velocity
 
@@ -161,8 +163,9 @@ while not done:
 
     pygame.draw.rect(screen, BLACK, board)
 
-    draw_circle(circle_position, 5)
-    draw_gripper(gripper_joints(wrist_position_x, wrist_position_y, joints=4))
+    Circle(DARK, circle_position, 5).display()
+    Gripper(LIGHT,wrist_position_x,wrist_position_y).display()
+    # draw_gripper(gripper_joints(wrist_position_x, wrist_position_y, joints=4))
 
     # UPDATE SCREEN WITH WHAT WAS DRAWN
     pygame.display.flip()
