@@ -67,10 +67,10 @@ class Gripper:
         self.joints_coordinates = joints_loc
 
     def display(self):
-        '''
+        """
         Display Gripper on screen
         :return:
-        '''
+        """
 
         pygame.draw.lines(screen, self.color, False, self.joints_coordinates, 3)
 
@@ -137,8 +137,7 @@ while not done:
 
     # --LOGIC--
 
-    action = np.random.choice(action_space)  # get random action from action space dictionary
-    print(action)
+    action = np.random.choice(action_space)  # get random action from action space
     if action == 0:
         gripper_y_velocity = -3
         print('Key up')
@@ -164,7 +163,7 @@ while not done:
     pygame.draw.rect(screen, BLACK, board)
 
     Circle(DARK, circle_position, 5).display()
-    Gripper(LIGHT,wrist_position_x,wrist_position_y).display()
+    Gripper(LIGHT, wrist_position_x, wrist_position_y).display()
     # draw_gripper(gripper_joints(wrist_position_x, wrist_position_y, joints=4))
 
     # UPDATE SCREEN WITH WHAT WAS DRAWN
