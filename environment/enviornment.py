@@ -2,12 +2,13 @@ import pygame
 import random
 # random.seed(108)
 import numpy as np
+import math
 
 
 class Circle:
 
     """
-    Draw dark colored circle of some size in some position.
+    Draw colored circle of some size in some position.
 
     :param position: co-ordinates of circle center
     :param circle_size: size of circle
@@ -31,46 +32,78 @@ class Gripper:
     joints=5, Joints coorditates when gripper is positioned in initial position:
     [[x-4,y-18],[x-6,y-14],[x-6,y-4],[x, y],[x+6,y-4],[x+6,y-14],[x+4,y-18]]
 
-    :param wrist_pos_x: co-ordinates of wrist on x-axis
-    :param wrist_pos_y: co-ordinates of wrist on y-axis
+    :param j0x: co-ordinates of wrist on x-axis
+    :param j0y: co-ordinates of wrist on y-axis
     :return: coordinates od joints
     """
 
-    def __init__(self, color, wrist_pos_x, wrist_pos_y, joints=4):
+    def __init__(self, color, j0x, j0y, joints=4, angle=0, pinch=0):
         self.color = color
-        self.wrist_pos_x = wrist_pos_x
-        self.wrist_pos_y = wrist_pos_y
+        self.j0x = j0x
+        self.j0y = j0y
         self.joints = joints
+        self.angle = angle
+        self.pinch = pinch
+
+        # Bones length
+        phalanx1 = 5  # from wrist to first joint
+        phalanx2 = 14  # from first joint to second
+        phalanx3 = 3  # from second joint to third
+
+        joints_loc = None
 
         # if self.joints == 5:
-        #     joints_loc = [                                # _________
-        #         [self.wrist_pos_x - 4, self.wrist_pos_y - 18],     # / ________\
-        #         [self.wrist_pos_x - 6, self.wrist_pos_y - 14],    # //         \\
-        #         [self.wrist_pos_x - 6, self.wrist_pos_y - 4],    # // left finger co-ordinates
-        #         [self.wrist_pos_x, self.wrist_pos_y],           # ||  wrist position
-        #         [self.wrist_pos_x + 6, self.wrist_pos_y - 4],    # \\ right finger co-ordinates
-        #         [self.wrist_pos_x + 6, self.wrist_pos_y-14],      # \\_________//
-        #         [self.wrist_pos_x + 4, self.wrist_pos_y - 18]      # \_________/
+        #     joints_loc = [                           # __________
+        #         [self.j0x - 4, self.j0y - 18],     # / _________ \
+        #         [self.j0x - 6, self.j0y - 14],    # / /         \ \
+        #         [self.j0x - 6, self.j0y - 4],    # / / left finger co-ordinates
+        #         [self.j0x, self.j0y],           # | |  wrist position
+        #         [self.j0x + 6, self.j0y - 4],    # \ \ right finger co-ordinates
+        #         [self.j0x + 6, self.j0y-14],      # \ \_________/ /
+        #         [self.j0x + 4, self.j0y - 18]      # \___________/
         #     ]
 
         if self.joints == 4:
+            j0 = (self.j0x, self.j0y)  # Initial wrist co-ordinates
+
+            jl1x = round(j0[0] - (phalanx1 * math.sin(math.radians(self.angle))))  # x = c * sin(alpha)
+            jl1y = round(j0[1] - math.sqrt(phalanx1**2 - jl1x**2))  # y = sqrt(c**2 - a**2)
+            jl1 = [jl1x, jl1y]
+
+            jl2x = round(jl1x + (phalanx2 * math.sin(math.radians(self.angle + self.pinch))))
+            jl2y = round(jl1y - math.sqrt(phalanx2**2 - jl2x**2))
+            jl2 = [jl2x, jl2y]
+
+            jl3x = round(jl2x + (phalanx3 * math.sin(math.radians(self.angle + self.pinch))))
+            jl3y = round(jl2y - math.sqrt(phalanx3**2 - jl2x**2))
+            jl3 = [jl3x, jl3y]
+
+            jr1x = round(j0[0] + (phalanx1 * math.sin(math.radians(self.angle))))
+            jr1y = round(j0[1] + math.sqrt(phalanx1**2 - jl1x**2))
+            jr1 = [jl1x, jl1y]
+
+            jr2x = round(jl1x - (phalanx2 * math.sin(math.radians(self.angle + self.pinch))))
+            jr2y = round(jl1y - math.sqrt(phalanx2**2 - jl2x**2))
+            jr2 = [jr2x, jr2y]
+
+            jr3x = round(jl2x - (phalanx3 * math.sin(math.radians(self.angle + self.pinch))))
+            jr3y = round(jl2y - math.sqrt(phalanx3**2 - jl2x**2))
+            jr3 = [jr3x, jr3y]
+
             joints_loc = [
-                [self.wrist_pos_x - 2, self.wrist_pos_y - 14],   # ____________
-                [self.wrist_pos_x - 5, self.wrist_pos_y - 14],  # |  ________  |
-                [self.wrist_pos_x - 5, self.wrist_pos_y],      # _| |        |_|
-                [self.wrist_pos_x, self.wrist_pos_y],          # _| |         _
-                [self.wrist_pos_x + 5, self.wrist_pos_y],       # | |________| |
-                [self.wrist_pos_x + 5, self.wrist_pos_y - 14],  # |____________|
-                [self.wrist_pos_x + 2, self.wrist_pos_y - 14]
+                jl3,         # jl1  ____________  jl2
+                jl2,             # |  ________  |
+                jl1,             # | |        |_| jl3
+                j0,            # j0| |         _
+                jr1,             # | |________| | jr3
+                jr2,             # |____________|
+                jr3           # jr1               jr2
             ]
 
         self.joints_coordinates = joints_loc
 
     def display(self):
-        """
-        Display Gripper on screen
-        :return:
-        """
+        """Display Gripper on screen"""
 
         pygame.draw.lines(screen, self.color, False, self.joints_coordinates, 3)
 
