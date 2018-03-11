@@ -37,7 +37,7 @@ class Gripper:
     :return: coordinates od joints
     """
 
-    def __init__(self, color, j0x, j0y, joints=4, angle=0, pinch=0):
+    def __init__(self, color, j0x, j0y, joints=4, angle=90, pinch=0):
         self.color = color
         self.j0x = j0x
         self.j0y = j0y
@@ -67,27 +67,30 @@ class Gripper:
             j0 = (self.j0x, self.j0y)  # Initial wrist co-ordinates
 
             jl1x = round(j0[0] - (phalanx1 * math.sin(math.radians(self.angle))))  # x = c * sin(alpha)
-            jl1y = round(j0[1] - math.sqrt(phalanx1**2 - jl1x**2))  # y = sqrt(c**2 - a**2)
+            jl1y = round(j0[1] - math.sqrt(abs(phalanx1**2 - abs(jl1x-j0[0])**2)))  # y = sqrt(c**2 - a**2)
             jl1 = [jl1x, jl1y]
-
-            jl2x = round(jl1x + (phalanx2 * math.sin(math.radians(self.angle + self.pinch))))
-            jl2y = round(jl1y - math.sqrt(phalanx2**2 - jl2x**2))
-            jl2 = [jl2x, jl2y]
-
-            jl3x = round(jl2x + (phalanx3 * math.sin(math.radians(self.angle + self.pinch))))
-            jl3y = round(jl2y - math.sqrt(phalanx3**2 - jl2x**2))
-            jl3 = [jl3x, jl3y]
+            print(jl1)
 
             jr1x = round(j0[0] + (phalanx1 * math.sin(math.radians(self.angle))))
-            jr1y = round(j0[1] + math.sqrt(phalanx1**2 - jl1x**2))
-            jr1 = [jl1x, jl1y]
+            jr1y = round(j0[1] - math.sqrt(abs(phalanx1**2 - abs(jr1x-j0[0])**2)))
+            jr1 = [jr1x, jr1y]
+            print(jr1)
 
-            jr2x = round(jl1x - (phalanx2 * math.sin(math.radians(self.angle + self.pinch))))
-            jr2y = round(jl1y - math.sqrt(phalanx2**2 - jl2x**2))
+            jl2x = round(jl1x + (phalanx2 * math.sin(math.radians(self.angle - 90 + self.pinch))))
+            jl2y = round(jl1y - math.sqrt(abs(phalanx2**2 - abs(jl2x-jl1x)**2)))
+            jl2 = [jl2x, jl2y]
+            print(jl2)
+
+            jr2x = round(jr1x - (phalanx2 * math.sin(math.radians(self.angle - 90 + self.pinch))))
+            jr2y = round(jr1y - math.sqrt(abs(phalanx2**2 - abs(jr2x-jr1x)**2)))
             jr2 = [jr2x, jr2y]
 
-            jr3x = round(jl2x - (phalanx3 * math.sin(math.radians(self.angle + self.pinch))))
-            jr3y = round(jl2y - math.sqrt(phalanx3**2 - jl2x**2))
+            jl3x = round(jl2x + (phalanx3 * math.sin(math.radians(self.angle + self.pinch))))
+            jl3y = round(jl2y - math.sqrt(abs(phalanx3**2 - abs(jl3x-jl2x)**2)))
+            jl3 = [jl3x, jl3y]
+
+            jr3x = round(jr2x - (phalanx3 * math.sin(math.radians(self.angle + self.pinch))))
+            jr3y = round(jr2y - math.sqrt(abs(phalanx3**2 - abs(jr3x-jr2x)**2)))
             jr3 = [jr3x, jr3y]
 
             joints_loc = [
@@ -161,6 +164,7 @@ done = False
 
 # Main Program Loop
 while not done:
+# for _ in range(1):
 
     # --EVENT PROCESSING--
 
@@ -173,16 +177,12 @@ while not done:
     action = np.random.choice(action_space)  # get random action from action space
     if action == 0:
         gripper_y_velocity = -3
-        print('Key up')
     if action == 1:
         gripper_x_velocity = 3
-        print('Key down')
     if action == 2:
-        print('Key left')
         gripper_x_velocity = -3
     if action == 3:
         gripper_x_velocity = 3
-        print('Key right')
 
     wrist_position_x += gripper_x_velocity
     wrist_position_y += gripper_y_velocity
@@ -197,7 +197,6 @@ while not done:
 
     Circle(DARK, circle_position, 5).display()
     Gripper(LIGHT, wrist_position_x, wrist_position_y).display()
-    # draw_gripper(gripper_joints(wrist_position_x, wrist_position_y, joints=4))
 
     # UPDATE SCREEN WITH WHAT WAS DRAWN
     pygame.display.flip()
