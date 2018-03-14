@@ -4,45 +4,58 @@ import random
 import numpy as np
 import math
 
+
 def get_coordinates(coordinates, length, angle):
+    """
+    This function gives coordinates of some point(endpoint) which
+    is some length away for diffrent point(start point).
+
+    :param coordinates: startpoint coordinates [x, y]
+    :param length: lenght betwwen start point and endpoint
+    :param angle: angle of line between
+    :return: coordinates of endpoint
+    """
     return (
         coordinates[0] + length * math.cos(math.radians(angle)),
         coordinates[1] + length * math.sin(math.radians(angle))
     )
 
+
 class Circle:
 
-    """
-    Draw colored circle of some size in some position.
-
-    :param position: co-ordinates of circle center
-    :param circle_size: size of circle
-    :param color: color of circle in RGB
-    """
+    """This class creates circles"""
 
     def __init__(self, color, position, circle_size):
+        """
+
+        :param color:
+        :param position:
+        :param circle_size:
+        """
         self.position = position
         self.circle_size = circle_size
         self.color = color
 
     def display(self):
-
+        """Draws circle on screen"""
         pygame.draw.circle(screen, self.color, self.position, self.circle_size)
 
 
 class Gripper:
 
-    """
-    Define what are gripper joints coordinates based on position of gripper wrist.
-    joints=5, Joints coorditates when gripper is positioned in initial position:
-    [[x-4,y-18],[x-6,y-14],[x-6,y-4],[x, y],[x+6,y-4],[x+6,y-14],[x+4,y-18]]
-
-    :param j0x: co-ordinates of wrist on x-axis
-    :param j0y: co-ordinates of wrist on y-axis
-    :return: coordinates od joints
-    """
+    """Create gripper"""
 
     def __init__(self, color, j0x, j0y, joints=4, angle=0, pinch=0):
+        """
+
+        :param color:
+        :param j0x:
+        :param j0y:
+        :param joints:
+        :param angle:
+        :param pinch:
+        """
+
         self.color = color
         self.j0x = j0x
         self.j0y = j0y
@@ -55,7 +68,7 @@ class Gripper:
         phalanx2 = 14  # from first joint to second
         phalanx3 = 3  # from second joint to third
 
-        joints_loc = None
+        joints_loc = []
 
         # if self.joints == 5:
         #     joints_loc = [                           # __________
@@ -69,6 +82,16 @@ class Gripper:
         #     ]
 
         if self.joints == 4:
+            """
+            jl1  ____________  jl2
+                |  ________  |
+                | |        |_| jl3
+              j0| |         _
+                | |________| | jr3
+                |____________|
+             jr1               jr2
+            """
+
             j0 = (self.j0x, self.j0y)  # Initial wrist co-ordinates
 
             jl1 = get_coordinates(j0, -phalanx1, self.angle)
@@ -80,40 +103,7 @@ class Gripper:
             jl3 = get_coordinates(jl2, phalanx3, self.angle)
             jr3 = get_coordinates(jr2, -phalanx3, self.angle)
 
-
-            # jl1x = round(j0[0] - (phalanx1 * math.sin(math.radians(self.angle + 90))))  # x = c * sin(alpha)
-            # jl1y = round(j0[1] - math.sqrt(abs(phalanx1**2 - abs(jl1x-j0[0])**2)))  # y = sqrt(c**2 - a**2)
-            # jl1 = [jl1x, jl1y]
-            #
-            # jr1x = round(j0[0] + (phalanx1 * math.sin(math.radians(self.angle + 90))))
-            # jr1y = round(j0[1] + math.sqrt(abs(phalanx1**2 - abs(jr1x-j0[0])**2)))
-            # jr1 = [jr1x, jr1y]
-            #
-            # jl2x = round(jl1x - (phalanx2 * math.sin(math.radians(self.angle + self.pinch))))
-            # jl2y = round(jl1y - math.sqrt(abs(phalanx2**2 - abs(jl2x-jl1x)**2)))
-            # jl2 = [jl2x, jl2y]
-            #
-            # jr2x = round(jr1x - (phalanx2 * math.sin(math.radians(self.angle + self.pinch))))
-            # jr2y = round(jr1y - math.sqrt(abs(phalanx2**2 - abs(jr2x-jr1x)**2)))
-            # jr2 = [jr2x, jr2y]
-            #
-            # jl3x = round(jl2x + (phalanx3 * math.sin(math.radians(self.angle + 90 + self.pinch))))
-            # jl3y = round(jl2y - math.sqrt(abs(phalanx3**2 - abs(jl3x-jl2x)**2)))
-            # jl3 = [jl3x, jl3y]
-            #
-            # jr3x = round(jr2x - (phalanx3 * math.sin(math.radians(self.angle + 90 + self.pinch))))
-            # jr3y = round(jr2y - math.sqrt(abs(phalanx3**2 - abs(jr3x-jr2x)**2)))
-            # jr3 = [jr3x, jr3y]
-
-            joints_loc = [
-                jl3,         # jl1  ____________  jl2
-                jl2,             # |  ________  |
-                jl1,             # | |        |_| jl3
-                j0,            # j0| |         _
-                jr1,             # | |________| | jr3
-                jr2,             # |____________|
-                jr3           # jr1               jr2
-            ]
+            joints_loc = [jl3, jl2, jl1, j0, jr1, jr2, jr3]
 
         self.joints_coordinates = joints_loc
 
@@ -215,7 +205,6 @@ while not done:
     screen.fill(WHITE)  # Clear screen
 
     pygame.draw.rect(screen, BLACK, board)
-    pygame.draw.line(screen, WHITE, [100,0], [100,200])
 
     Circle(RED, circle_position, 5).display()
     Gripper(GREEN, wrist_position_x, wrist_position_y, angle=gripper_angle).display()
