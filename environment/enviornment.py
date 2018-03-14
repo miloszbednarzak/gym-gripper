@@ -1,6 +1,5 @@
 import pygame
 import random
-# random.seed(108)
 import numpy as np
 import math
 
@@ -64,8 +63,8 @@ class Gripper:
         self.pinch = pinch
 
         # Bones length
-        phalanx1 = 5  # from wrist to first joint
-        phalanx2 = 14  # from first joint to second
+        phalanx1 = 7  # from wrist to first joint
+        phalanx2 = 16  # from first joint to second
         phalanx3 = 3  # from second joint to third
 
         joints_loc = []
@@ -97,8 +96,8 @@ class Gripper:
             jl1 = get_coordinates(j0, -phalanx1, self.angle)
             jr1 = get_coordinates(j0, phalanx1, self.angle)
 
-            jl2 = get_coordinates(jl1, phalanx2, self.angle - 90)
-            jr2 = get_coordinates(jr1, phalanx2, self.angle - 90)
+            jl2 = get_coordinates(jl1, phalanx2, self.angle - 90 + self.pinch)
+            jr2 = get_coordinates(jr1, phalanx2, self.angle - 90 - self.pinch)
 
             jl3 = get_coordinates(jl2, phalanx3, self.angle)
             jr3 = get_coordinates(jr2, -phalanx3, self.angle)
@@ -106,6 +105,32 @@ class Gripper:
             joints_loc = [jl3, jl2, jl1, j0, jr1, jr2, jr3]
 
         self.joints_coordinates = joints_loc
+
+    def act(self, action):
+        """
+
+        :param action:
+        :return:
+        """
+
+        if action == 0:
+            self.j0y -= 3
+        elif action == 1:
+            self.j0y += 3
+        elif action == 2:
+            self.j0x -= 3
+        elif action == 3:
+            self.j0x += 3
+        elif action == 4:
+            self.angle += 5
+        elif action == 5:
+            self.angle -= 5
+        elif action == 6 and self.pinch / 5 < 2:
+            self.pinch += 5
+        elif action == 7 and self.pinch / 5 > -7:
+            self.pinch -= 5
+
+        return self.j0x, self.j0y, self.angle, self.pinch
 
     def display(self):
         """Display Gripper on screen"""
@@ -120,21 +145,30 @@ GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
 WHITE = (255, 255, 255)
 
+# Initializing game engine
+pygame.init()
+
+# Set window name
+pygame.display.set_caption("2D grasping environment")
+
+# Used to manage how fast screen updates
+clock = pygame.time.Clock()
+
+# set size of screen
+size = [200, 200]  # [width, height]
+screen = pygame.display.set_mode(size, pygame.RESIZABLE)  # add pygame.RESIZABLE to arguments for resizable screen
+
+# set size of observation space alias board
+board = [20, 20, 160, 160]  # [x, y, width, height]
+
 # Gripper wrist position
 wrist_position_x = 100
 wrist_position_y = 195
 
-# Rotation of gripper
-gripper_angle = 0
+# Create gripper
+green_gripper = Gripper(GREEN, wrist_position_x, wrist_position_y)
 
-# Gripper movement velocity
-gripper_x_velocity = 0
-gripper_y_velocity = 0
-
-# set size of screen
-size = [200, 200]  # [width, height]
-
-# set size of action space
+# set gripper action space
 define_actions = {
     0: 'GO UP',
     1: 'GO DOWN',
@@ -142,27 +176,14 @@ define_actions = {
     3: 'GO RIGHT',
     4: 'TURN CLOCKWISE',
     5: 'TURN COUNTER-CLOCKWISE',
-    # 6: 'TIGHTEN FINGERS',
-    # 7: 'EXTEND FINGERS'
+    6: 'TIGHTEN FINGERS',
+    7: 'EXTEND FINGERS'
 }
 action_space = np.array(list(define_actions.keys()))
 
-# set size of observation space alias board
-board = [20, 20, 160, 160]  # [x, y, width, height]
-
+# Create circle in random location
 circle_position = [random.randint(20, 160), random.randint(20, 160)]  # [width, height]
-
-
-# Initializing game engine
-pygame.init()
-
-screen = pygame.display.set_mode(size, pygame.RESIZABLE)  # add pygame.RESIZABLE to arguments for resizable screen
-
-# Set window name
-pygame.display.set_caption("2D grasping environment")
-
-# Used to manage how fast screen updates
-clock = pygame.time.Clock()
+red_circle = Circle(RED, circle_position, 6)
 
 done = False
 
@@ -177,28 +198,10 @@ while not done:
 
     # --LOGIC--
 
-    gripper_x_velocity, gripper_y_velocity = 0, 0
-    rotation = 0
+    gripper_action = np.random.choice(action_space)  # get random action from action space
+    wrist_x, wrist_y, gripper_angle, gripper_pinch = green_gripper.act(gripper_action)
 
-    action = np.random.choice(action_space)  # get random action from action space
-    if action == 0:
-        gripper_y_velocity = -3
-    if action == 1:
-        gripper_y_velocity = 3
-    if action == 2:
-        gripper_x_velocity = -3
-    if action == 3:
-        gripper_x_velocity = 3
-    if action == 4:
-        rotation = 15
-    if action == 5:
-        rotation = -15
-
-    wrist_position_x += gripper_x_velocity
-    wrist_position_y += gripper_y_velocity
-
-    gripper_angle += rotation
-    gripper_angle = gripper_angle
+    green_gripper = Gripper(GREEN, wrist_x, wrist_y, angle=gripper_angle, pinch=gripper_pinch)
 
     # --DRAWING--
 
@@ -206,13 +209,13 @@ while not done:
 
     pygame.draw.rect(screen, BLACK, board)
 
-    Circle(RED, circle_position, 5).display()
-    Gripper(GREEN, wrist_position_x, wrist_position_y, angle=gripper_angle).display()
+    red_circle.display()
+    green_gripper.display()
 
     # UPDATE SCREEN WITH WHAT WAS DRAWN
     pygame.display.flip()
 
     # Limiting to x frames per second
-    clock.tick(10)
+    clock.tick(50)
 
 pygame.quit()
