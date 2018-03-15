@@ -1,6 +1,6 @@
 import pygame
 import random
-import numpy as np
+# import numpy as np
 import math
 
 
@@ -24,14 +24,13 @@ class Circle:
 
     """This class creates circles"""
 
-    def __init__(self, color, position, circle_size):
+    def __init__(self, color, circle_size=6):
         """
 
         :param color:
-        :param position:
         :param circle_size:
         """
-        self.position = position
+        self.position = [random.randint(20, 160), random.randint(20, 160)]
         self.circle_size = circle_size
         self.color = color
 
@@ -44,7 +43,7 @@ class Gripper:
 
     """Create gripper"""
 
-    def __init__(self, color, j0x, j0y, joints=4, angle=0, pinch=0):
+    def __init__(self, color, j0x=100, j0y=195, joints=4, angle=0, pinch=0):
         """
 
         :param color:
@@ -62,23 +61,14 @@ class Gripper:
         self.angle = angle
         self.pinch = pinch
 
+    def get_joints(self):
+
         # Bones length
         phalanx1 = 7  # from wrist to first joint
         phalanx2 = 16  # from first joint to second
         phalanx3 = 3  # from second joint to third
 
         joints_loc = []
-
-        # if self.joints == 5:
-        #     joints_loc = [                           # __________
-        #         [self.j0x - 4, self.j0y - 18],     # / _________ \
-        #         [self.j0x - 6, self.j0y - 14],    # / /         \ \
-        #         [self.j0x - 6, self.j0y - 4],    # / / left finger co-ordinates
-        #         [self.j0x, self.j0y],           # | |  wrist position
-        #         [self.j0x + 6, self.j0y - 4],    # \ \ right finger co-ordinates
-        #         [self.j0x + 6, self.j0y-14],      # \ \_________/ /
-        #         [self.j0x + 4, self.j0y - 18]      # \___________/
-        #     ]
 
         if self.joints == 4:
             """
@@ -105,14 +95,25 @@ class Gripper:
             joints_loc = [jl3, jl2, jl1, j0, jr1, jr2, jr3]
 
         self.joints_coordinates = joints_loc
-
-    def act(self, action):
         """
+       if self.joints == 5:
+             jl1   __________ jl2
+                 / _________ \
+                / /         \_\
+               / /              jl3
+           j0 | |  
+               \ \           __ jr3
+                \ \_________/ /
+                 \___________/ 
+             jr1               jr2
+       """
 
-        :param action:
+    def act(self):
+        """
         :return:
         """
-
+        action_space = [x for x in range(8)]
+        action = random.choice(action_space)
         if action == 0:
             self.j0y -= 3
         elif action == 1:
@@ -130,7 +131,7 @@ class Gripper:
         elif action == 7 and self.pinch / 5 > -7:
             self.pinch -= 5
 
-        return self.j0x, self.j0y, self.angle, self.pinch
+        # return self.j0x, self.j0y, self.angle, self.pinch
 
     def display(self):
         """Display Gripper on screen"""
@@ -161,13 +162,6 @@ screen = pygame.display.set_mode(size, pygame.RESIZABLE)  # add pygame.RESIZABLE
 # set size of observation space alias board
 board = [20, 20, 160, 160]  # [x, y, width, height]
 
-# Gripper wrist position
-wrist_position_x = 100
-wrist_position_y = 195
-
-# Create gripper
-green_gripper = Gripper(GREEN, wrist_position_x, wrist_position_y)
-
 # set gripper action space
 define_actions = {
     0: 'GO UP',
@@ -179,11 +173,11 @@ define_actions = {
     6: 'TIGHTEN FINGERS',
     7: 'EXTEND FINGERS'
 }
-action_space = np.array(list(define_actions.keys()))
 
 # Create circle in random location
-circle_position = [random.randint(20, 160), random.randint(20, 160)]  # [width, height]
-red_circle = Circle(RED, circle_position, 6)
+red_circle = Circle(RED)
+
+green_gripper = Gripper(GREEN)
 
 done = False
 
@@ -197,11 +191,8 @@ while not done:
             done = True
 
     # --LOGIC--
-
-    gripper_action = np.random.choice(action_space)  # get random action from action space
-    wrist_x, wrist_y, gripper_angle, gripper_pinch = green_gripper.act(gripper_action)
-
-    green_gripper = Gripper(GREEN, wrist_x, wrist_y, angle=gripper_angle, pinch=gripper_pinch)
+    green_gripper.get_joints()
+    green_gripper.act()
 
     # --DRAWING--
 
