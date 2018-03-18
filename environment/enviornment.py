@@ -1,6 +1,6 @@
 import pygame
 import random
-# import numpy as np
+import numpy as np
 import math
 
 
@@ -60,6 +60,7 @@ class Gripper:
         self.joints = joints
         self.angle = angle
         self.pinch = pinch
+        self.joints_coordinates = None
 
     def get_joints(self):
 
@@ -68,7 +69,7 @@ class Gripper:
         phalanx2 = 16  # from first joint to second
         phalanx3 = 3  # from second joint to third
 
-        joints_loc = []
+        joints_loc = None
 
         if self.joints == 4:
             """
@@ -95,6 +96,7 @@ class Gripper:
             joints_loc = [jl3, jl2, jl1, j0, jr1, jr2, jr3]
 
         self.joints_coordinates = joints_loc
+
         """
        if self.joints == 5:
              jl1   __________ jl2
@@ -108,12 +110,26 @@ class Gripper:
              jr1               jr2
        """
 
-    def act(self):
+    def action_space(self):
+
+        define_actions = {
+            0: 'GO UP',
+            1: 'GO DOWN',
+            2: 'GO LEFT',
+            3: 'GO RIGHT',
+            4: 'TURN CLOCKWISE',
+            5: 'TURN COUNTER-CLOCKWISE',
+            6: 'TIGHTEN FINGERS',
+            7: 'EXTEND FINGERS'
+        }
+
+        return np.fromiter(define_actions.keys(), dtype=int)
+
+    def act(self, action_space):
         """
         :return:
         """
-        action_space = [x for x in range(8)]
-        action = random.choice(action_space)
+        action = np.random.choice(action_space)
         if action == 0:
             self.j0y -= 3
         elif action == 1:
@@ -130,8 +146,6 @@ class Gripper:
             self.pinch += 5
         elif action == 7 and self.pinch / 5 > -7:
             self.pinch -= 5
-
-        # return self.j0x, self.j0y, self.angle, self.pinch
 
     def display(self):
         """Display Gripper on screen"""
@@ -162,18 +176,6 @@ screen = pygame.display.set_mode(size, pygame.RESIZABLE)  # add pygame.RESIZABLE
 # set size of observation space alias board
 board = [20, 20, 160, 160]  # [x, y, width, height]
 
-# set gripper action space
-define_actions = {
-    0: 'GO UP',
-    1: 'GO DOWN',
-    2: 'GO LEFT',
-    3: 'GO RIGHT',
-    4: 'TURN CLOCKWISE',
-    5: 'TURN COUNTER-CLOCKWISE',
-    6: 'TIGHTEN FINGERS',
-    7: 'EXTEND FINGERS'
-}
-
 # Create circle in random location
 red_circle = Circle(RED)
 
@@ -192,7 +194,7 @@ while not done:
 
     # --LOGIC--
     green_gripper.get_joints()
-    green_gripper.act()
+    green_gripper.act(green_gripper.action_space())
 
     # --DRAWING--
 
