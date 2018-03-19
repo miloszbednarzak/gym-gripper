@@ -1,4 +1,4 @@
-# Deep Learning in Simulated Action Conditions of the Robotic Grasping Arm
-## Master deegree work code
+# Deep Learning in Simulated Acting Conditions of the Robotic Grasping Arm
+## Master thesis code
 
 In preparation
