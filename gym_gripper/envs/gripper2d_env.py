@@ -164,7 +164,7 @@ WHITE = (255, 255, 255)
 pygame.init()
 
 # Set window name
-pygame.display.set_caption("2D grasping gym-gripper")
+pygame.display.set_caption("2D grasping gym_gripper")
 
 # Used to manage how fast screen updates
 clock = pygame.time.Clock()
