@@ -52,12 +52,12 @@ class Gripper2DEnv(gym.Env):
         pygame.init()
         pygame.display.set_caption("2D grasping gym_gripper")
         self.clock = pygame.time.Clock()
-        screen = pygame.display.set_mode([self.screen_height, self.screen_width], pygame.RESIZABLE)
-        screen.fill(COLORS['WHITE'])
+        self.screen = pygame.display.set_mode([self.screen_height, self.screen_width], pygame.RESIZABLE)
+        self.screen.fill(COLORS['WHITE'])
         pygame.display.flip()
         return
 
-    def render(self, mode='rgb_array', close=False):
+    def render(self, mode='rgb_array'):
         """Renders the environment.
         The set of supported modes varies per environment. (And some
         environments do not support rendering at all.) By convention,
@@ -79,17 +79,13 @@ class Gripper2DEnv(gym.Env):
             close (bool): close all open renderings
         """
         # --LOGIC--
-        green_gripper.get_joints()
-        green_gripper.act(green_gripper.action_space())
 
         # --DRAWING--
 
-        screen.fill(WHITE)  # Clear screen
+        self.screen.fill(COLORS['WHITE'])  # Clear screen
 
-        pygame.draw.rect(screen, BLACK, board)
-
-        red_circle.display()
-        green_gripper.display()
+        board = [20, 20, 160, 160]
+        pygame.draw.rect(self.screen, COLORS['BLACK'], board)
 
         # UPDATE SCREEN WITH WHAT WAS DRAWN
         pygame.display.flip()
