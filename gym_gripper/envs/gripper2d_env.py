@@ -52,8 +52,9 @@ class Gripper2DEnv(gym.Env):
         pygame.init()
         pygame.display.set_caption("2D grasping gym_gripper")
         self.clock = pygame.time.Clock()
-        screen = pygame.display.set_mode(self.screen_height, self.screen_width, pygame.RESIZABLE)
+        screen = pygame.display.set_mode([self.screen_height, self.screen_width], pygame.RESIZABLE)
         screen.fill(COLORS['WHITE'])
+        pygame.display.flip()
         return
 
     def render(self, mode='rgb_array', close=False):
@@ -153,7 +154,3 @@ COLORS = {
     'GREEN': [0, 255, 0],
     'BLUE': [0, 0, 255]
 }
-
-
-if __name__ == '__main__':
-    env = gym.make('Gripper2D-v0')
