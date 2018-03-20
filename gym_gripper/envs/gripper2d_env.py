@@ -1,12 +1,10 @@
 import numpy as np
+import math
+import pygame
 import gym
 from gym import error, spaces, utils
 from gym.utils import seeding
 
-try:
-    import pygame
-except ImportError as e:
-    raise error.DependencyNotInstalled(f"{e}. (HINT: you can install pygame dependencies by running 'pip install gym[atari]'.)"
 
 class Gripper2DEnv(gym.Env):
     metadata = {'render.modes': ['rgb_array']}
@@ -15,8 +13,11 @@ class Gripper2DEnv(gym.Env):
 
         self.action_space = spaces.Discrete(8)
 
-        screen_height, screen_width = (200, 200)
-        self.observation_space = spaces.Box(low=0, high=255, shape=(screen_height, screen_width, 3))
+        self.screen_height, self.screen_width = (200, 200)
+        self.observation_space = spaces.Box(low=0, high=255,
+                                            shape=(self.screen_height, self.screen_width, 3))
+
+        self.seed()
 
     def step(self, a):
         """Run one timestep of the environment's dynamics. When end of
@@ -47,7 +48,13 @@ class Gripper2DEnv(gym.Env):
         """Resets the state of the environment and returns an initial observation.
         Returns: observation (object): the initial observation of the space.
         """
-        pass
+
+        pygame.init()
+        pygame.display.set_caption("2D grasping gym_gripper")
+        self.clock = pygame.time.Clock()
+        screen = pygame.display.set_mode(self.screen_height, self.screen_width, pygame.RESIZABLE)
+        screen.fill(COLORS['WHITE'])
+        return
 
     def render(self, mode='rgb_array', close=False):
         """Renders the environment.
@@ -70,14 +77,28 @@ class Gripper2DEnv(gym.Env):
             mode (str): the mode to render with
             close (bool): close all open renderings
         """
-        pass
+        # --LOGIC--
+        green_gripper.get_joints()
+        green_gripper.act(green_gripper.action_space())
+
+        # --DRAWING--
+
+        screen.fill(WHITE)  # Clear screen
+
+        pygame.draw.rect(screen, BLACK, board)
+
+        red_circle.display()
+        green_gripper.display()
+
+        # UPDATE SCREEN WITH WHAT WAS DRAWN
+        pygame.display.flip()
 
     def close(self):
         """Override _close in your subclass to perform any necessary cleanup.
         Environments will automatically close() themselves when
         garbage collected or when the program exits.
         """
-        return
+        return pygame.quit()
 
     def seed(self, seed=None):
         """Sets the seed for this env's random number generator(s).
@@ -92,7 +113,9 @@ class Gripper2DEnv(gym.Env):
               'seed'. Often, the main seed equals the provided 'seed', but
               this won't be true if seed=None, for example.
         """
-        pass
+
+        self.np_random, seed = seeding.np_random(seed)
+        return [seed]
 
     def get_observation(self):
 
@@ -101,6 +124,14 @@ class Gripper2DEnv(gym.Env):
     def get_action(self):
 
         return
+
+
+def get_coordinates(x, y, length, angle):
+    return (
+        x + length * math.cos(math.radians(angle)),
+        y + length * math.sin(math.radians(angle))
+    )
+
 
 ACTION_MEANING = {
         0: 'GO UP',
@@ -113,6 +144,16 @@ ACTION_MEANING = {
         7: 'EXTEND FINGERS'
     }
 
+COLORS = {
+    'BLACK': [0, 0, 0],
+    'DARK': [85, 85, 85],
+    'LIGHT': [170, 170, 170],
+    'WHITE': [255, 255, 255],
+    'RED': [255, 0, 0],
+    'GREEN': [0, 255, 0],
+    'BLUE': [0, 0, 255]
+}
+
 
 if __name__ == '__main__':
-    pass
+    env = gym.make('Gripper2D-v0')
