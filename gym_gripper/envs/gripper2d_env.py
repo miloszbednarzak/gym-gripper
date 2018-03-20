@@ -18,7 +18,7 @@ class Gripper2DEnv(gym.Env):
         screen_height, screen_width = (200, 200)
         self.observation_space = spaces.Box(low=0, high=255, shape=(screen_height, screen_width, 3))
 
-    def step(self, action):
+    def step(self, a):
         """Run one timestep of the environment's dynamics. When end of
         episode is reached, you are responsible for calling `reset()`
         to reset this environment's state.
@@ -33,6 +33,7 @@ class Gripper2DEnv(gym.Env):
         """
 
         reward = 0.
+        # action = set_action[a]
 
         observation = self.get_observation()
 
@@ -94,6 +95,10 @@ class Gripper2DEnv(gym.Env):
         pass
 
     def get_observation(self):
+
+        return
+
+    def get_action(self):
 
         return
 
