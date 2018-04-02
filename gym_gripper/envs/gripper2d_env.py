@@ -54,8 +54,8 @@ class Gripper2DEnv(gym.Env):
         self.clock = pygame.time.Clock()
         self.screen = pygame.display.set_mode([self.screen_height, self.screen_width], pygame.RESIZABLE)
         self.screen.fill(COLORS['WHITE'])
-        pygame.display.flip()
-        return
+        # pygame.display.flip()
+        # return
 
     def render(self, mode='rgb_array'):
         """Renders the environment.
@@ -89,6 +89,8 @@ class Gripper2DEnv(gym.Env):
 
         # UPDATE SCREEN WITH WHAT WAS DRAWN
         pygame.display.flip()
+
+        self.clock.tick(50)
 
     def close(self):
         """Override _close in your subclass to perform any necessary cleanup.
