@@ -15,7 +15,8 @@ class Gripper2DEnv(gym.Env):
 
         self.screen_height, self.screen_width = (200, 200)
         self.observation_space = spaces.Box(low=0, high=255,
-                                            shape=(self.screen_height, self.screen_width, 3))
+                                            shape=(self.screen_height, self.screen_width, 3),
+                                            dtype=np.uint8)
 
         self.seed()
 
