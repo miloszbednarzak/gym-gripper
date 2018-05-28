@@ -8,6 +8,34 @@ import sys
 import numpy as np
 
 
+class Board(pygame.sprite.Sprite):
+
+    def __init__(self, rect_width, rect_height,
+                 pos_init, screen_width, screen_height):
+
+        pygame.sprite.Sprite.__init__(self)
+
+        self.rect_height = rect_height
+        self.rect_width = rect_width
+        self.SCREEN_HEIGHT = screen_height
+        self.SCREEN_WIDTH = screen_width
+
+        image = pygame.Surface((rect_width, rect_height))
+        image.fill((0, 0, 0, 0))
+        image.set_colorkey((0, 0, 0))
+
+        pygame.draw.rect(
+            image,
+            (0, 0, 1),
+            (0, 0, rect_width, rect_height),
+            0
+        )
+
+        self.image = image
+        self.rect = self.image.get_rect()
+        self.rect.center = pos_init
+
+
 class Ball(pygame.sprite.Sprite):
 
     def __init__(self, radius, speed, rng,
@@ -31,7 +59,7 @@ class Ball(pygame.sprite.Sprite):
 
         pygame.draw.circle(
             image,
-            (255, 255, 255),
+            (255, 0, 0),
             (radius, radius),
             radius,
             0
@@ -125,12 +153,48 @@ class Gripper2DEnv(base.PyGameWrapper):
 
         base.PyGameWrapper.__init__(self, width, height, actions=actions)
 
-        self.ball_radius = percent_round_int(height, 0.03)
-
+        self.ball_radius = percent_round_int(0.03, height)
         self.ball_speed_ratio = ball_speed_ratio
+
+        self.board_width = percent_round_int(0.8, width)
+        self.board_height = percent_round_int(0.8, height)
 
         # game specific
         self.lives = 0
+
+    def init(self):
+        self.score = 0
+
+        self.board = Board(
+            self.board_width,
+            self.board_height,
+            (self.width / 2, self.height / 2),
+            self.width,
+            self.height
+        )
+
+        self.ball = Ball(
+            self.ball_radius,
+            self.ball_speed_ratio * self.height,
+            self.rng,
+            (np.random.randint((self.width - self.board_width) / 2 + self.ball_radius,
+                               self.board_width - self.ball_radius),
+             np.random.randint((self.width - self.board_width) / 2 + self.ball_radius,
+                               self.board_height - self.ball_radius)),
+            self.width,
+            self.height
+        )
+
+        # self.gripper = Gripper()
+
+        self.board_group = pygame.sprite.Group()
+        self.board_group.add(self.board)
+
+        self.ball_group = pygame.sprite.Group()
+        self.ball_group.add(self.ball)
+
+        self.gripper_group = pygame.sprite.Group()
+        # self.gripper_group.add(self.gripper)
 
     def _handle_player_events(self):
         self.dy = 0
@@ -154,27 +218,6 @@ class Gripper2DEnv(base.PyGameWrapper):
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
-
-    def init(self):
-        self.score = 0
-
-        self.ball = Ball(
-            self.ball_radius,
-            self.ball_speed_ratio * self.height,
-            self.rng,
-            (np.random.randint(0 + self.ball_radius, self.width - self.ball_radius),
-             np.random.randint(0 + self.ball_radius, self.height - self.ball_radius)),
-            self.width,
-            self.height
-        )
-
-        # self.gripper = Gripper()
-
-        self.ball_group = pygame.sprite.Group()
-        self.ball_group.add(self.ball)
-
-        self.gripper_group = pygame.sprite.Group()
-        # self.gripper_group.add(self.gripper)
 
     def reset(self):
         self.init()
@@ -205,7 +248,7 @@ class Gripper2DEnv(base.PyGameWrapper):
 
     def step(self, dt):
         dt /= 1000.0
-        self.screen.fill((0, 0, 0))
+        self.screen.fill((255, 255, 255))
 
         self.ball.speed = self.ball_speed_ratio * self.height
 
@@ -217,6 +260,7 @@ class Gripper2DEnv(base.PyGameWrapper):
 
         # logic
 
+        self.board_group.draw(self.screen)
         self.ball_group.draw(self.screen)
 
 
