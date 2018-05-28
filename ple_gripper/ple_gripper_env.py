@@ -3,9 +3,27 @@ from ple.games.utils.vec2d import vec2d
 from ple.games.utils import percent_round_int
 from pygame.constants import K_a, K_d, K_w, K_s, K_q, K_e
 import pygame
+
 import sys
+import math
 
 import numpy as np
+
+
+def set_coordinates(coordinates, length, angle):
+    """
+    This function gives coordinates of some point(endpoint) which
+    is some length away for diffrent point(start point).
+
+    :param coordinates: startpoint coordinates [x, y]
+    :param length: lenght betwwen start point and endpoint
+    :param angle: angle of line between
+    :return: coordinates of endpoint
+    """
+    return (
+        coordinates[0] + length * math.cos(math.radians(angle)),
+        coordinates[1] + length * math.sin(math.radians(angle))
+    )
 
 
 class Board(pygame.sprite.Sprite):
@@ -133,9 +151,55 @@ class Ball(pygame.sprite.Sprite):
 
 
 class Gripper(pygame.sprite.Sprite):
-    # TODO add gripper
-    def __init__(self):
-        pass
+    # TODO refactor gripper
+    def __init__(self, speed, gripper_size,
+                 pos_init, screen_width, screen_height,
+                 angle, pinch):
+
+        pygame.sprite.Sprite.__init__(self)
+
+        self.speed = speed
+        self.pos = vec2d(pos_init)
+        self.vel = vec2d((0, 0))
+
+        self.gripper_size = gripper_size
+
+        self.SCREEN_HEIGHT = screen_height
+        self.SCREEN_WIDTH = screen_width
+
+        self.angle = angle
+        self.pinch = pinch
+
+        self._phalanx1 = int(self.gripper_size * 7 / 16)
+        self._phalanx2 = int(self.gripper_size)
+        self._phalanx3 = int(self.gripper_size * 3 / 16)
+
+        jl1 = set_coordinates(pos_init, -self._phalanx1, self.angle)
+        jr1 = set_coordinates(pos_init, self._phalanx1, self.angle)
+
+        jl2 = set_coordinates(jl1, self._phalanx2, self.angle - 90 + self.pinch)
+        jr2 = set_coordinates(jr1, self._phalanx2, self.angle - 90 - self.pinch)
+
+        jl3 = set_coordinates(jl2, self._phalanx3, self.angle)
+        jr3 = set_coordinates(jr2, -self._phalanx3, self.angle)
+
+        self.joints_coordinates = [jl3, jl2, jl1, pos_init, jr1, jr2, jr3]
+
+        image = pygame.Surface((self.gripper_size * 2, self.gripper_size * 2))
+        image.fill((0, 0, 0, 0))
+        image.set_colorkey((0, 0, 0))
+
+        pygame.draw.lines(
+            image,
+            (0, 0, 255),
+            False,
+            self.joints_coordinates,
+            3
+        )
+
+        self.image = image
+        self.rect = self.image.get_rect()
+        self.rect.center = pos_init
 
 
 class Gripper2DEnv(base.PyGameWrapper):
@@ -158,6 +222,8 @@ class Gripper2DEnv(base.PyGameWrapper):
 
         self.board_width = percent_round_int(0.8, width)
         self.board_height = percent_round_int(0.8, height)
+
+        self.gripper_size = percent_round_int(0.05, height)
 
         # game specific
         self.lives = 0
@@ -185,7 +251,16 @@ class Gripper2DEnv(base.PyGameWrapper):
             self.height
         )
 
-        # self.gripper = Gripper()
+        self.gripper = Gripper(
+            0,
+            self.gripper_size,
+            (self.width / 2,
+             self.height - (self.height - self.board_height) / 2),
+            self.width,
+            self.height,
+            0,
+            0
+        )
 
         self.board_group = pygame.sprite.Group()
         self.board_group.add(self.board)
@@ -194,9 +269,10 @@ class Gripper2DEnv(base.PyGameWrapper):
         self.ball_group.add(self.ball)
 
         self.gripper_group = pygame.sprite.Group()
-        # self.gripper_group.add(self.gripper)
+        self.gripper_group.add(self.gripper)
 
     def _handle_player_events(self):
+        # TODO _handle_player_events
         self.dy = 0
 
         if __name__ == "__main__":
@@ -222,23 +298,22 @@ class Gripper2DEnv(base.PyGameWrapper):
     def reset(self):
         self.init()
         # after game over set random direction of ball otherwise it will always be the same
-        self._reset_ball(1 if self.rng.random_sample() > 0.5 else -1)
-        self._reset_gripper
+        self._reset_ball()
+        self._reset_gripper()
 
-    def _reset_ball(self, direction):
-        self.ball.pos.x = self.width / 2  # move it to the center
+    def _reset_ball(self):
+        self.ball.pos.x = np.random.randint((self.width - self.board_width) / 2 + self.ball_radius,
+                               self.board_width - self.ball_radius)
+        self.ball.pos.y = np.random.randint((self.width - self.board_width) / 2 + self.ball_radius,
+                               self.board_height - self.ball_radius)
+        # self.ball_speed_ratio = 0
 
-        # we go in the same direction that they lost in but at starting vel.
-        self.ball.vel.x = self.ball.speed * direction
-        self.ball.vel.y = (self.rng.random_sample() *
-                           self.ball.speed) - self.ball.speed * 0.5
-    # TODO implement inital position of ball
-
-    def _reset_gripper(self, direction):
+    def _reset_gripper(self):
         pass
     # TODO implement initial position of gripper
 
     def getScore(self):
+        # TODO implement scoring
         return self.score
 
     def game_over(self):
@@ -258,10 +333,11 @@ class Gripper2DEnv(base.PyGameWrapper):
 
         is_terminal_state = False
 
-        # logic
+        # TODO make logic
 
         self.board_group.draw(self.screen)
         self.ball_group.draw(self.screen)
+        self.gripper_group.draw(self.screen)
 
 
 if __name__ == "__main__":
