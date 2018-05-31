@@ -174,8 +174,8 @@ class Gripper(pygame.sprite.Sprite):
         self._phalanx2 = int(self.gripper_size)
         self._phalanx3 = int(self.gripper_size * 3 / 16)
 
-        jl1 = set_coordinates(pos_init, -self._phalanx1, self.angle)
-        jr1 = set_coordinates(pos_init, self._phalanx1, self.angle)
+        jl1 = set_coordinates(self.pos, -self._phalanx1, self.angle)
+        jr1 = set_coordinates(self.pos, self._phalanx1, self.angle)
 
         jl2 = set_coordinates(jl1, self._phalanx2, self.angle - 90 + self.pinch)
         jr2 = set_coordinates(jr1, self._phalanx2, self.angle - 90 - self.pinch)
@@ -191,10 +191,68 @@ class Gripper(pygame.sprite.Sprite):
 
         pygame.draw.lines(
             image,
-            (0, 0, 255),
+            (255, 0, 0),
             False,
             self.joints_coordinates,
             3
+        )
+
+        self.image = image
+        self.rect = self.image.get_rect()
+        self.rect.center = pos_init
+
+
+class GripperRect(pygame.sprite.Sprite):
+
+    def __init__(self, gripper_size,
+                 pos_init, screen_width, screen_height):
+
+        pygame.sprite.Sprite.__init__(self)
+
+        self.pos = vec2d(pos_init)
+        self.vel = vec2d((0, 0))
+
+        self.gripper_size = gripper_size
+        self.SCREEN_HEIGHT = screen_height
+        self.SCREEN_WIDTH = screen_width
+
+        image = pygame.Surface((self.gripper_size, self.gripper_size))
+        image.fill((0, 0, 0, 0))
+        image.set_colorkey((0, 0, 0))
+
+        pygame.draw.rect(
+            image,
+            (0, 0, 255),
+            (0, 0, self.gripper_size * 0.2, self.gripper_size),
+            0
+        )
+
+        pygame.draw.rect(
+            image,
+            (0, 0, 255),
+            (self.gripper_size * 0.85, 0, self.gripper_size * 0.2, self.gripper_size),
+            0
+        )
+
+        pygame.draw.rect(
+            image,
+            (0, 0, 255),
+            (0, gripper_size * 0.85, self.gripper_size, self.gripper_size * 0.2),
+            0
+        )
+
+        pygame.draw.rect(
+            image,
+            (0, 0, 255),
+            (0, 0, self.gripper_size * 0.4, self.gripper_size * 0.2),
+            0
+        )
+
+        pygame.draw.rect(
+            image,
+            (0, 0, 255),
+            (self.gripper_size * 0.6, 0, self.gripper_size * 0.4, self.gripper_size * 0.2),
+            0
         )
 
         self.image = image
@@ -223,7 +281,7 @@ class Gripper2DEnv(base.PyGameWrapper):
         self.board_width = percent_round_int(0.8, width)
         self.board_height = percent_round_int(0.8, height)
 
-        self.gripper_size = percent_round_int(0.05, height)
+        self.gripper_size = percent_round_int(0.08, width)
 
         # game specific
         self.lives = 0
@@ -251,11 +309,17 @@ class Gripper2DEnv(base.PyGameWrapper):
             self.height
         )
 
+        self.gripper_rect = GripperRect(
+            self.gripper_size,
+            (self.width / 2, self.height * 0.8),
+            self.width,
+            self.height)
+
         self.gripper = Gripper(
             0,
             self.gripper_size,
             (self.width / 2,
-             self.height - (self.height - self.board_height) / 2),
+             self.height*0.8),
             self.width,
             self.height,
             0,
@@ -267,6 +331,9 @@ class Gripper2DEnv(base.PyGameWrapper):
 
         self.ball_group = pygame.sprite.Group()
         self.ball_group.add(self.ball)
+
+        self.gripper_rect_group = pygame.sprite.Group()
+        self.gripper_rect_group.add(self.gripper_rect)
 
         self.gripper_group = pygame.sprite.Group()
         self.gripper_group.add(self.gripper)
@@ -338,6 +405,7 @@ class Gripper2DEnv(base.PyGameWrapper):
         self.board_group.draw(self.screen)
         self.ball_group.draw(self.screen)
         self.gripper_group.draw(self.screen)
+        self.gripper_rect_group.draw(self.screen)
 
 
 if __name__ == "__main__":
