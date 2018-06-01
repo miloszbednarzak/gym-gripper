@@ -1,85 +1,85 @@
-
-__version__ = "$Id:$"
-__docformat__ = "reStructuredText"
-
+import sys, random
 import pygame
 from pygame.locals import *
-from pygame.color import *
 import pymunk
 import pymunk.pygame_util
-from pymunk import Vec2d
-import math, sys, random
 
+def add_ball(space):
+    """Add a ball to the given space at a random position"""
+    mass = 1
+    radius = 14
+    inertia = pymunk.moment_for_circle(mass, 0, radius, (0,0))
+    body = pymunk.Body(mass, inertia)
+    x = random.randint(120,380)
+    body.position = x, 550
+    shape = pymunk.Circle(body, radius, (0,0))
+    space.add(body, shape)
+    return shape
 
-pygame.init()
-screen = pygame.display.set_mode((600, 600))
-clock = pygame.time.Clock()
-running = True
+def add_L(space):
+    """Add a inverted L shape with two joints"""
+    rotation_center_body = pymunk.Body(body_type = pymunk.Body.STATIC)
+    rotation_center_body.position = (300,300)
 
-### Physics stuff
-space = pymunk.Space()
-space.gravity = (0.0, -900.0)
-draw_options = pymunk.pygame_util.DrawOptions(screen)
+    rotation_limit_body = pymunk.Body(body_type = pymunk.Body.STATIC)
+    rotation_limit_body.position = (200,300)
 
-## Balls
-balls = []
+    body = pymunk.Body(10, 10000)
+    body.position = (300,300)
+    l1 = pymunk.Segment(body, (-150, 0), (255.0, 0.0), 5.0)
+    l2 = pymunk.Segment(body, (-150.0, 0), (-150.0, 50.0), 5.0)
 
-### walls
-static_body = space.static_body
-static_lines = [pymunk.Segment(static_body, (111.0, 280.0), (407.0, 246.0), 0.0)
-                ,pymunk.Segment(static_body, (407.0, 246.0), (407.0, 343.0), 0.0)
-                ]
-for line in static_lines:
-    line.elasticity = 0.95
-    line.friction = 0.9
-space.add(static_lines)
+    rotation_center_joint = pymunk.PinJoint(body, rotation_center_body, (0,0), (0,0))
+    joint_limit = 25
+    rotation_limit_joint = pymunk.SlideJoint(body, rotation_limit_body, (-100,0), (0,0), 0, joint_limit)
 
-ticks_to_next_ball = 10
+    space.add(l1, l2, body, rotation_center_joint, rotation_limit_joint)
+    return l1,l2
 
-while running:
-    for event in pygame.event.get():
-        if event.type == QUIT:
-            running = False
-        elif event.type == KEYDOWN and event.key == K_ESCAPE:
-            running = False
-        elif event.type == KEYDOWN and event.key == K_p:
-            pygame.image.save(screen, "bouncing_balls.png")
+def main():
+    pygame.init()
+    screen = pygame.display.set_mode((600, 600))
+    pygame.display.set_caption("Joints. Just wait and the L will tip over")
+    clock = pygame.time.Clock()
 
-    ticks_to_next_ball -= 1
-    if ticks_to_next_ball <= 0:
-        ticks_to_next_ball = 100
-        mass = 10
-        radius = 25
-        inertia = pymunk.moment_for_circle(mass, 0, radius, (0,0))
-        body = pymunk.Body(mass, inertia)
-        x = random.randint(115,350)
-        body.position = x, 400
-        shape = pymunk.Circle(body, radius, (0,0))
-        shape.elasticity = 0.95
-        shape.friction = 0.9
-        space.add(body, shape)
-        balls.append(shape)
+    space = pymunk.Space()
+    space.gravity = (0.0, -900.0)
 
-    ### Clear screen
-    screen.fill(THECOLORS["white"])
+    lines = add_L(space)
+    balls = []
+    draw_options = pymunk.pygame_util.DrawOptions(screen)
 
-    ### Draw stuff
-    balls_to_remove = []
-    for ball in balls:
-        if ball.body.position.y < 100: balls_to_remove.append(ball)
+    ticks_to_next_ball = 10
+    while True:
+        for event in pygame.event.get():
+            if event.type == QUIT:
+                sys.exit(0)
+            elif event.type == KEYDOWN and event.key == K_ESCAPE:
+                sys.exit(0)
 
-    for ball in balls_to_remove:
-        space.remove(ball, ball.body)
-        balls.remove(ball)
+        ticks_to_next_ball -= 1
+        if ticks_to_next_ball <= 0:
+            ticks_to_next_ball = 25
+            ball_shape = add_ball(space)
+            balls.append(ball_shape)
 
-    space.debug_draw(draw_options)
+        screen.fill((255,255,255))
 
-    ### Update physics
-    dt = 1.0/60.0
-    for x in range(1):
-        space.step(dt)
+        balls_to_remove = []
+        for ball in balls:
+            if ball.body.position.y < 150:
+                balls_to_remove.append(ball)
 
-    ### Flip screen
-    pygame.display.flip()
-    clock.tick(50)
-    pygame.display.set_caption("fps: " + str(clock.get_fps()))
+        for ball in balls_to_remove:
+            space.remove(ball, ball.body)
+            balls.remove(ball)
+
+        space.debug_draw(draw_options)
+
+        space.step(1/50.0)
+
+        pygame.display.flip()
+        clock.tick(50)
+
+if __name__ == '__main__':
+    main()
