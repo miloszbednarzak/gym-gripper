@@ -1,5 +1,5 @@
 from ple.games import base
-from ple.games.utils.vec2d import vec2d
+from euclid import Vector2
 from ple.games.utils import percent_round_int
 from pygame.constants import K_a, K_d, K_w, K_s, K_q, K_e
 import pygame
@@ -8,23 +8,6 @@ import sys
 import math
 
 import numpy as np
-
-
-def set_coordinates(coordinates, length, angle):
-    """
-    This function gives coordinates of some point(endpoint) which
-    is some length away for diffrent point(start point).
-
-    :param coordinates: startpoint coordinates [x, y]
-    :param length: lenght betwwen start point and endpoint
-    :param angle: angle of line between
-    :return: coordinates of endpoint
-    """
-    return (
-        coordinates[0] + length * math.cos(math.radians(angle)),
-        coordinates[1] + length * math.sin(math.radians(angle))
-    )
-
 
 class Board(pygame.sprite.Sprite):
 
@@ -64,9 +47,9 @@ class Ball(pygame.sprite.Sprite):
         self.rng = rng
         self.radius = radius
         self.speed = speed
-        self.pos = vec2d(pos_init)
-        self.pos_before = vec2d(pos_init)
-        self.vel = vec2d((speed, -1.0 * speed))
+        self.pos = Vector2(pos_init)
+        self.pos_before = Vector2(pos_init)
+        self.vel = Vector2((speed, -1.0 * speed))
 
         self.SCREEN_HEIGHT = screen_height
         self.SCREEN_WIDTH = screen_width
@@ -98,13 +81,12 @@ class Ball(pygame.sprite.Sprite):
         t = (s2_x * (p0_y - p2_y) - s2_y * (p0_x - p2_x)) / (-s2_x * s1_y + s1_x * s2_y)
 
         return 0 <= s <= 1 and 0 <= t <= 1
-
-    def update(self, dt):
+"""
+def update(self, dt):
 
         self.pos.x += self.vel.x * dt
         self.pos.y += self.vel.y * dt
-
-        is_pad_hit = False
+        is_pad_hit = False"""
 # TODO make ball bounceable
 """        if self.pos.x <= agent_player.pos.x + agent_player.rect_width:
             if self.line_intersection(self.pos_before.x, self.pos_before.y,
@@ -151,66 +133,14 @@ class Ball(pygame.sprite.Sprite):
 
 
 class Gripper(pygame.sprite.Sprite):
-    # TODO refactor gripper
-    def __init__(self, speed, gripper_size,
-                 pos_init, screen_width, screen_height,
-                 angle, pinch):
-
-        pygame.sprite.Sprite.__init__(self)
-
-        self.speed = speed
-        self.pos = vec2d(pos_init)
-        self.vel = vec2d((0, 0))
-
-        self.gripper_size = gripper_size
-
-        self.SCREEN_HEIGHT = screen_height
-        self.SCREEN_WIDTH = screen_width
-
-        self.angle = angle
-        self.pinch = pinch
-
-        self._phalanx1 = int(self.gripper_size * 7 / 16)
-        self._phalanx2 = int(self.gripper_size)
-        self._phalanx3 = int(self.gripper_size * 3 / 16)
-
-        jl1 = set_coordinates(self.pos, -self._phalanx1, self.angle)
-        jr1 = set_coordinates(self.pos, self._phalanx1, self.angle)
-
-        jl2 = set_coordinates(jl1, self._phalanx2, self.angle - 90 + self.pinch)
-        jr2 = set_coordinates(jr1, self._phalanx2, self.angle - 90 - self.pinch)
-
-        jl3 = set_coordinates(jl2, self._phalanx3, self.angle)
-        jr3 = set_coordinates(jr2, -self._phalanx3, self.angle)
-
-        self.joints_coordinates = [jl3, jl2, jl1, pos_init, jr1, jr2, jr3]
-
-        image = pygame.Surface((self.gripper_size * 2, self.gripper_size * 2))
-        image.fill((0, 0, 0, 0))
-        image.set_colorkey((0, 0, 0))
-
-        pygame.draw.lines(
-            image,
-            (255, 0, 0),
-            False,
-            self.joints_coordinates,
-            3
-        )
-
-        self.image = image
-        self.rect = self.image.get_rect()
-        self.rect.center = pos_init
-
-
-class GripperRect(pygame.sprite.Sprite):
 
     def __init__(self, gripper_size,
                  pos_init, screen_width, screen_height):
 
         pygame.sprite.Sprite.__init__(self)
 
-        self.pos = vec2d(pos_init)
-        self.vel = vec2d((0, 0))
+        self.pos = Vector2(pos_init)
+        self.vel = Vector2((0, 0))
 
         self.gripper_size = gripper_size
         self.SCREEN_HEIGHT = screen_height
@@ -309,22 +239,11 @@ class Gripper2DEnv(base.PyGameWrapper):
             self.height
         )
 
-        self.gripper_rect = GripperRect(
+        self.gripper = Gripper(
             self.gripper_size,
             (self.width / 2, self.height * 0.8),
             self.width,
             self.height)
-
-        self.gripper = Gripper(
-            0,
-            self.gripper_size,
-            (self.width / 2,
-             self.height*0.8),
-            self.width,
-            self.height,
-            0,
-            0
-        )
 
         self.board_group = pygame.sprite.Group()
         self.board_group.add(self.board)
@@ -332,11 +251,9 @@ class Gripper2DEnv(base.PyGameWrapper):
         self.ball_group = pygame.sprite.Group()
         self.ball_group.add(self.ball)
 
-        self.gripper_rect_group = pygame.sprite.Group()
-        self.gripper_rect_group.add(self.gripper_rect)
-
         self.gripper_group = pygame.sprite.Group()
         self.gripper_group.add(self.gripper)
+
 
     def _handle_player_events(self):
         # TODO _handle_player_events
@@ -405,11 +322,9 @@ class Gripper2DEnv(base.PyGameWrapper):
         self.board_group.draw(self.screen)
         self.ball_group.draw(self.screen)
         self.gripper_group.draw(self.screen)
-        self.gripper_rect_group.draw(self.screen)
 
 
 if __name__ == "__main__":
-    import numpy as np
 
     pygame.init()
     game = Gripper2DEnv()
