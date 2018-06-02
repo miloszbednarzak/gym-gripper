@@ -17,6 +17,7 @@ class Circle(pymunk.Body):
         # self.position = (np.random.randint(25, 175), np.random.randint(25, 175))
         self.position = (100, 45)
         shape = pymunk.Circle(self, 5)
+        shape.friction = 0.6
 
         space.add(self, shape)
 
@@ -26,13 +27,24 @@ class Gripper(pymunk.Body):
     def __init__(self, space):
         super().__init__(body_type=pymunk.Body.KINEMATIC)
         self.position = (100, 25)
+
+        l_joint_body = pymunk.Body(body_type=pymunk.Body.KINEMATIC)
+        l_joint_body.position = self.position.x
+
+
         palm = pymunk.Segment(self, (-7, 0), (7, 0), 2)
 
         phalanx_l1 = pymunk.Segment(self, (-7, 0), (-7, 16), 2)
-        phalanx_l2 = pymunk.Segment(self, (-7, 16), (-4, 16), 2)
+        phalanx_l2 = pymunk.Segment(self, (-7, 16), (-3, 16), 2)
 
         phalanx_r1 = pymunk.Segment(self, (7, 0), (7, 16), 2)
-        phalanx_r2 = pymunk.Segment(self, (7, 16), (4, 16), 2)
+        phalanx_r2 = pymunk.Segment(self, (7, 16), (3, 16), 2)
+
+        palm.friction = 0.6
+        phalanx_l1.friction = 0.6
+        phalanx_l2.friction = 0.6
+        phalanx_r1.friction = 0.6
+        phalanx_r2.friction = 0.6
 
         space.add(self, palm, phalanx_l1, phalanx_l2, phalanx_r1, phalanx_r2)
 
@@ -47,19 +59,12 @@ class Gripper2DEnv(base.PyGameWrapper):
             "up": K_w,
             "down": K_s,
             "clockwise": K_e,
-            "counter_clockwise": K_q
+            "counter_clockwise": K_q,
+            "tighten_fingers": K_z,
+            "extend_fingers": K_x
         }
 
         base.PyGameWrapper.__init__(self, width, height, actions=actions)
-
-        self.circle_mass = 1
-        self.circle_radius = 6
-        self.circle_position = (np.random.randint(20 + self.circle_radius,
-                                                  180 - self.circle_radius),
-                                np.random.randint(20 + self.circle_radius,
-                                                  180 - self.circle_radius))
-
-        self.gripper_position = (100, 25)
 
     def init(self):
         self.space = pymunk.Space()
@@ -88,6 +93,10 @@ class Gripper2DEnv(base.PyGameWrapper):
             self.gripper.velocity = (0, 5)
         elif action == "down":
             self.gripper.velocity = (0, -5)
+        elif action == "clockwise":
+            self.gripper.angle -= 0.2
+        elif action == "counter_clockwise":
+            self.gripper.angle += 0.2
 
         self.space.step(1 / 50.0)
 
