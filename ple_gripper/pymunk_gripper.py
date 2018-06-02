@@ -10,45 +10,38 @@ import numpy as np
 import random
 
 
-def add_circle(space, mass, radius, position):
-    moment = pymunk.moment_for_circle(mass, 0, radius)
+class Circle(pymunk.Body):
 
-    body = pymunk.Body(mass, moment)
-    body.position = position
+    def __init__(self, space):
+        super().__init__(1, pymunk.inf)
+        # self.position = (np.random.randint(25, 175), np.random.randint(25, 175))
+        self.position = (100, 45)
+        shape = pymunk.Circle(self, 5)
 
-    shape = pymunk.Circle(body, radius)
-
-    space.add(body, shape)
-
-    return shape
+        space.add(self, shape)
 
 
-def add_gripper(space, position):
+class Gripper(pymunk.Body):
 
-    body_center = pymunk.Body(body_type=pymunk.Body.STATIC)
-    body_center.position = position
+    def __init__(self, space):
+        super().__init__(body_type=pymunk.Body.KINEMATIC)
+        self.position = (100, 25)
+        palm = pymunk.Segment(self, (-7, 0), (7, 0), 2)
 
-    body = pymunk.Body(100, 10000)
-    body.position = position
-    
-    palm = pymunk.Segment(body, (-7, 0), (7, 0), 2)
+        phalanx_l1 = pymunk.Segment(self, (-7, 0), (-7, 16), 2)
+        phalanx_l2 = pymunk.Segment(self, (-7, 16), (-4, 16), 2)
 
-    phalanx_l1 = pymunk.Segment(body, (-7, 0), (-7, 16), 2)
-    phalanx_l2 = pymunk.Segment(body, (-7, 16), (-4, 16), 2)
+        phalanx_r1 = pymunk.Segment(self, (7, 0), (7, 16), 2)
+        phalanx_r2 = pymunk.Segment(self, (7, 16), (4, 16), 2)
 
-    phalanx_r1 = pymunk.Segment(body, (7, 0), (7, 16), 2)
-    phalanx_r2 = pymunk.Segment(body, (7, 16), (4, 16), 2)
-
-    rotation_center_joint = pymunk.PinJoint(body, body_center, (0, 0), (0, 0))
-
-    space.add(palm, phalanx_l1, phalanx_l2, phalanx_r1, phalanx_r2, body, rotation_center_joint)
-    return palm, phalanx_l1, phalanx_l2, phalanx_r1, phalanx_r2
+        space.add(self, palm, phalanx_l1, phalanx_l2, phalanx_r1, phalanx_r2)
 
 
 class Gripper2DEnv(base.PyGameWrapper):
 
     def __init__(self, width=200, height=200):
-        self.actions = {
+
+        actions = {
             "left": K_a,
             "right": K_d,
             "up": K_w,
@@ -57,7 +50,7 @@ class Gripper2DEnv(base.PyGameWrapper):
             "counter_clockwise": K_q
         }
 
-        base.PyGameWrapper.__init__(self, width, height, actions=self.actions)
+        base.PyGameWrapper.__init__(self, width, height, actions=actions)
 
         self.circle_mass = 1
         self.circle_radius = 6
@@ -73,23 +66,35 @@ class Gripper2DEnv(base.PyGameWrapper):
 
         self.draw_options = pymunk.pygame_util.DrawOptions(self.screen)
 
-        add_circle(self.space, self.circle_mass,
-                   self.circle_radius, self.circle_position)
-        add_gripper(self.space, self.gripper_position)
+        self.circle = Circle(self.space)
 
-    def step(self, dt, action):
+        self.gripper = Gripper(self.space)
+
+    def step(self, dt):
         for event in pygame.event.get():
             if event.type == QUIT:
                 sys.exit(0)
             elif event.type == KEYDOWN and event.key == K_ESCAPE:
                 sys.exit(0)
 
+        action = random.choice(list(self.actions.keys()))
         print(action)
+
+        if action == "left":
+            self.gripper.velocity = (-5, 0)
+        elif action == "right":
+            self.gripper.velocity = (5, 0)
+        elif action == "up":
+            self.gripper.velocity = (0, 5)
+        elif action == "down":
+            self.gripper.velocity = (0, -5)
 
         self.space.step(1 / 50.0)
 
         self.screen.fill((255, 255, 255))
         self.space.debug_draw(self.draw_options)
+
+        self.circle.velocity = (0, 0)
 
     def getScore(self):
         pass
@@ -112,5 +117,5 @@ if __name__ == "__main__":
 
     while True:
         dt = game.clock.tick_busy_loop(60)
-        game.step(dt, random.choice(list(game.actions.keys())))
+        game.step(dt)
         pygame.display.update()
