@@ -28,17 +28,22 @@ class Gripper(pymunk.Body):
         super().__init__(body_type=pymunk.Body.KINEMATIC)
         self.position = (100, 25)
 
-        l_joint_body = pymunk.Body(body_type=pymunk.Body.KINEMATIC)
-        l_joint_body.position = self.position.x
-
-
         palm = pymunk.Segment(self, (-7, 0), (7, 0), 2)
 
-        phalanx_l1 = pymunk.Segment(self, (-7, 0), (-7, 16), 2)
-        phalanx_l2 = pymunk.Segment(self, (-7, 16), (-3, 16), 2)
+        l_joint_body = pymunk.Body(body_type=pymunk.Body.KINEMATIC)
+        l_joint_body.position = (self.position.x - 7, self.position.y)
 
-        phalanx_r1 = pymunk.Segment(self, (7, 0), (7, 16), 2)
-        phalanx_r2 = pymunk.Segment(self, (7, 16), (3, 16), 2)
+        phalanx_l1 = pymunk.Segment(l_joint_body, (0, 0), (0, 16), 2)
+        phalanx_l2 = pymunk.Segment(l_joint_body, (0, 16), (4, 16), 2)
+
+
+        r_joint_body = pymunk.Body(body_type=pymunk.Body.KINEMATIC)
+        r_joint_body.position = (self.position.x + 7, self.position.y)
+
+        right_joint = pymunk.PinJoint(self, r_joint_body, (0, 0), (0, 0))
+
+        phalanx_r1 = pymunk.Segment(r_joint_body, (0, 0), (0, 16), 2)
+        phalanx_r2 = pymunk.Segment(r_joint_body, (0, 16), (-4, 16), 2)
 
         palm.friction = 0.6
         phalanx_l1.friction = 0.6
@@ -46,7 +51,9 @@ class Gripper(pymunk.Body):
         phalanx_r1.friction = 0.6
         phalanx_r2.friction = 0.6
 
-        space.add(self, palm, phalanx_l1, phalanx_l2, phalanx_r1, phalanx_r2)
+        space.add(self, palm)
+        space.add(l_joint_body, phalanx_l1, phalanx_l2)
+        space.add(r_joint_body, phalanx_r1, phalanx_r2, right_joint)
 
 
 class Gripper2DEnv(base.PyGameWrapper):
@@ -82,21 +89,23 @@ class Gripper2DEnv(base.PyGameWrapper):
             elif event.type == KEYDOWN and event.key == K_ESCAPE:
                 sys.exit(0)
 
-        action = random.choice(list(self.actions.keys()))
-        print(action)
+        # action = random.choice(list(self.actions.keys()))
+        # print(action)
 
-        if action == "left":
-            self.gripper.velocity = (-5, 0)
-        elif action == "right":
-            self.gripper.velocity = (5, 0)
-        elif action == "up":
-            self.gripper.velocity = (0, 5)
-        elif action == "down":
-            self.gripper.velocity = (0, -5)
-        elif action == "clockwise":
-            self.gripper.angle -= 0.2
-        elif action == "counter_clockwise":
-            self.gripper.angle += 0.2
+        # if action == "left":
+        #     self.gripper.velocity = (-5, 0)
+        # elif action == "right":
+        #     self.gripper.velocity = (5, 0)
+        # elif action == "up":
+        #     self.gripper.velocity = (0, 5)
+        # elif action == "down":
+        #     self.gripper.velocity = (0, -5)
+        # elif action == "clockwise":
+        #     self.gripper.velocity = (0, 0)
+        #     self.gripper.angle -= 0.2
+        # elif action == "counter_clockwise":
+        #     self.gripper.velocity = (0, 0)
+        #     self.gripper.angle += 0.2
 
         self.space.step(1 / 50.0)
 
