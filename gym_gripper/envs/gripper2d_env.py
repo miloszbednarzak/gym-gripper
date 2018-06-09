@@ -47,7 +47,7 @@ class Gripper(pymunk.Body):
 
 
 class Gripper2DEnv(gym.Env):
-    metadata = {'render.modes': ['rgb_array']}
+    metadata = {'render.modes': ['human', 'rgb_array']}
 
     def __init__(self):
 
@@ -127,8 +127,8 @@ class Gripper2DEnv(gym.Env):
         num_steps = np.random.randint(2, 5)
 
         for _ in range(num_steps):
-            if not self._get_reward()[1]:
-                reward += self._get_reward()[0]
+            if not self._get_reward_done()[1]:
+                reward += self._get_reward_done()[0]
                 self._gripper_action(action)
                 # steps to tune
                 self.space.step(1 / 60)
@@ -137,14 +137,14 @@ class Gripper2DEnv(gym.Env):
 
         observation = self._get_observation()
 
-        done = self._get_reward()[1]
+        done = self._get_reward_done()[1]
 
         self.gripper.velocity = (0, 0)
         self.gripper.angular_velocity = 0
 
         return observation, reward, done, {}
 
-    def render(self, mode='rgb_array'):
+    def render(self, mode='human'):
         """Renders the environment.
         The set of supported modes varies per environment. (And some
         environments do not support rendering at all.) By convention,
@@ -166,15 +166,18 @@ class Gripper2DEnv(gym.Env):
             close (bool): close all open renderings
         """
 
-        self.screen.fill((255, 255, 255))
+        if mode == 'human':
+            self.screen.fill((255, 255, 255))
 
-        pygame.draw.rect(self.screen, (0, 0, 0), [20, 20, 160, 160])
+            pygame.draw.rect(self.screen, (0, 0, 0), [20, 20, 160, 160])
 
-        self.space.debug_draw(self.draw_options)
+            self.space.debug_draw(self.draw_options)
 
-        pygame.display.update()
+            pygame.display.flip()
 
-        return self._get_observation()
+        elif mode == 'rgb_array':
+
+            return self._get_observation()
 
     def close(self):
         """Override _close in your subclass to perform any necessary cleanup.
@@ -219,7 +222,7 @@ class Gripper2DEnv(gym.Env):
         elif action == 5:
             self.gripper.angular_velocity += self.gripper_angular_velocity
 
-    def _get_reward(self):
+    def _get_reward_done(self):
         radius = self.circle.shape.radius
 
         if self.circle.position.x < 20 - radius \
