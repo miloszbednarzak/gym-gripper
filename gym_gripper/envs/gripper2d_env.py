@@ -1,9 +1,49 @@
-import numpy as np
-import math
-import pygame
 import gym
 from gym import error, spaces, utils
 from gym.utils import seeding
+
+import pygame
+from pygame.locals import *
+from pygame.color import *
+
+import pymunk
+import pymunk.pygame_util
+from pymunk import Vec2d
+
+import math
+import sys
+import numpy as np
+import random
+
+
+class Circle(pymunk.Body):
+
+    def __init__(self, space):
+        super().__init__(1, pymunk.inf)
+        self.position = (np.random.randint(25, 175), np.random.randint(25, 175))
+        # self.position = (100, 45)
+        self.shape = pymunk.Circle(self, 5)
+        self.shape.friction = 0.6
+
+        space.add(self, self.shape)
+
+
+class Gripper(pymunk.Body):
+
+    def __init__(self, space):
+        super().__init__(body_type=pymunk.Body.KINEMATIC)
+        self.position = (100, 25)
+
+        palm = pymunk.Segment(self, (-7, 0), (7, 0), 2)
+        left_phalanx = pymunk.Segment(self, (-7, 0), (-7, 16), 2)
+        left_phalanx1 = pymunk.Segment(self, (-7, 16), (-3, 16), 2)
+
+        right_phalanx = pymunk.Segment(self, (7, 0), (7, 16), 2)
+        right_phalanx1 = pymunk.Segment(self, (7, 16), (3, 16), 2)
+
+        space.add(self, palm,
+                  left_phalanx, left_phalanx1,
+                  right_phalanx, right_phalanx1)
 
 
 class Gripper2DEnv(gym.Env):
@@ -11,14 +51,61 @@ class Gripper2DEnv(gym.Env):
 
     def __init__(self):
 
-        self.action_space = spaces.Discrete(8)
-
-        self.screen_height, self.screen_width = (200, 200)
-        self.observation_space = spaces.Box(low=0, high=255,
-                                            shape=(self.screen_height, self.screen_width, 3),
-                                            dtype=np.uint8)
+        self._actions = (0, 1, 2, 3, 4, 5)
+        self.score = 0.0  # required.
+        self.lives = 0  # required. Can be 0 or -1 if not required.
+        self.screen = None  # must be set to None
+        self.clock = None  # must be set to None
+        self.height = 200
+        self.width = 200
+        self.screen_dim = (self.width, self.height)  # width and height
+        self.allowed_fps = None  # fps that the game is allowed to run at.
+        self.NOOP = K_F15  # the noop key
 
         self.seed()
+
+        self.action_space = spaces.Discrete(len(self._actions))
+        self.observation_space = spaces.Box(low=0, high=255,
+                                            shape=(self.width, self.height, 3),
+                                            dtype=np.uint8)
+
+        self.rewards = {
+            "nothing": -1,
+            "out": -5,
+            "win": 5
+        }
+
+        self.gripper_velocity = 10
+        self.gripper_angular_velocity = 5
+
+    def reset(self):
+        """Resets the state of the environment and returns an initial observation.
+        Returns: observation (object): the initial observation of the space.
+        """
+        pygame.init()
+        pygame.display.set_caption("Gripper2D")
+        self.screen = pygame.display.set_mode(self.screen_dim, 0, 32)
+        self.clock = pygame.time.Clock()
+
+        self.space = pymunk.Space()
+
+        self.draw_options = pymunk.pygame_util.DrawOptions(self.screen)
+
+        self.circle = Circle(self.space)
+
+        self.gripper = Gripper(self.space)
+
+        # TODO think of step size
+        # self.space.step(1/pymunk.inf)
+        self.space.step(1 / 60)
+
+        self.screen.fill((255, 255, 255))
+
+        pygame.draw.rect(self.screen, (0, 0, 0), [20, 20, 160, 160])
+
+        self.space.debug_draw(self.draw_options)
+
+        return self._get_observation()
 
     def step(self, a):
         """Run one timestep of the environment's dynamics. When end of
@@ -35,28 +122,27 @@ class Gripper2DEnv(gym.Env):
         """
 
         reward = 0.
-        # action = set_action[a]
+        action = self._actions[a]
 
-        observation = self.get_observation()
+        num_steps = np.random.randint(2, 5)
 
-        reward += None
+        for _ in range(num_steps):
+            if not self._get_reward()[1]:
+                reward += self._get_reward()[0]
+                self._gripper_action(action)
+                # steps to tune
+                self.space.step(1 / 60)
+            else:
+                self.close()
 
-        done = False
+        observation = self._get_observation()
+
+        done = self._get_reward()[1]
+
+        self.gripper.velocity = (0, 0)
+        self.gripper.angular_velocity = 0
 
         return observation, reward, done, {}
-
-    def reset(self):
-        """Resets the state of the environment and returns an initial observation.
-        Returns: observation (object): the initial observation of the space.
-        """
-
-        pygame.init()
-        pygame.display.set_caption("2D grasping gym_gripper")
-        self.clock = pygame.time.Clock()
-        self.screen = pygame.display.set_mode([self.screen_height, self.screen_width], pygame.RESIZABLE)
-        self.screen.fill(COLORS['WHITE'])
-        # pygame.display.flip()
-        # return
 
     def render(self, mode='rgb_array'):
         """Renders the environment.
@@ -79,26 +165,23 @@ class Gripper2DEnv(gym.Env):
             mode (str): the mode to render with
             close (bool): close all open renderings
         """
-        # --LOGIC--
 
-        # --DRAWING--
+        self.screen.fill((255, 255, 255))
 
-        self.screen.fill(COLORS['WHITE'])  # Clear screen
+        pygame.draw.rect(self.screen, (0, 0, 0), [20, 20, 160, 160])
 
-        board = [20, 20, 160, 160]
-        pygame.draw.rect(self.screen, COLORS['BLACK'], board)
+        self.space.debug_draw(self.draw_options)
 
-        # UPDATE SCREEN WITH WHAT WAS DRAWN
-        pygame.display.flip()
+        pygame.display.update()
 
-        self.clock.tick(50)
+        return self._get_observation()
 
     def close(self):
         """Override _close in your subclass to perform any necessary cleanup.
         Environments will automatically close() themselves when
         garbage collected or when the program exits.
         """
-        return pygame.quit()
+        sys.exit(0)
 
     def seed(self, seed=None):
         """Sets the seed for this env's random number generator(s).
@@ -117,39 +200,46 @@ class Gripper2DEnv(gym.Env):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
 
-    def get_observation(self):
+    def _get_observation(self):
 
-        return
+        return pygame.surfarray.array3d(
+            pygame.display.get_surface()).astype(np.uint8)
 
-    def get_action(self):
+    def _gripper_action(self, action):
+        if action == 0:
+            self.gripper.velocity = (-self.gripper_velocity, 0)
+        elif action == 1:
+            self.gripper.velocity = (self.gripper_velocity, 0)
+        elif action == 2:
+            self.gripper.velocity = (0, self.gripper_velocity)
+        elif action == 3:
+            self.gripper.velocity = (0, -self.gripper_velocity)
+        if action == 4:
+            self.gripper.angular_velocity -= self.gripper_angular_velocity
+        elif action == 5:
+            self.gripper.angular_velocity += self.gripper_angular_velocity
 
-        return
+    def _get_reward(self):
+        radius = self.circle.shape.radius
 
-
-def get_coordinates(x, y, length, angle):
-    return (
-        x + length * math.cos(math.radians(angle)),
-        y + length * math.sin(math.radians(angle))
-    )
-
+        if self.circle.position.x < 20 - radius \
+                or self.circle.position.x > 180 + radius \
+                or self.circle.position.y < 20 - radius \
+                or self.circle.position.y > 180 + radius:
+            return self.rewards["win"], True
+        elif self.gripper.position.x < 4 \
+                or self.gripper.position.x > 196 \
+                or self.gripper.position.y < 4 \
+                or self.gripper.position.y > 196:
+            return self.rewards["out"], False
+        else:
+            return self.rewards["nothing"], False
 
 ACTION_MEANING = {
-        0: 'GO UP',
-        1: 'GO DOWN',
-        2: 'GO LEFT',
-        3: 'GO RIGHT',
-        4: 'TURN CLOCKWISE',
-        5: 'TURN COUNTER-CLOCKWISE',
-        6: 'TIGHTEN FINGERS',
-        7: 'EXTEND FINGERS'
-    }
-
-COLORS = {
-    'BLACK': [0, 0, 0],
-    'DARK': [85, 85, 85],
-    'LIGHT': [170, 170, 170],
-    'WHITE': [255, 255, 255],
-    'RED': [255, 0, 0],
-    'GREEN': [0, 255, 0],
-    'BLUE': [0, 0, 255]
+    0: "LEFT",
+    1: "RIGHT",
+    2: "UP",
+    3: "DOWN",
+    4: "CLOCKWISE",
+    5: "COUNTER_CLOCKWISE",
 }
