@@ -1,27 +1,23 @@
 import gym
-from gym import error, spaces, utils
+from gym import spaces, utils
 from gym.utils import seeding
 
 import pygame
 from pygame.locals import *
-from pygame.color import *
-
 import pymunk
 import pymunk.pygame_util
 from pymunk import Vec2d
 
-import math
 import sys
 import numpy as np
-import random
 
 
 class Circle(pymunk.Body):
 
     def __init__(self, space):
         super().__init__(1, pymunk.inf)
-        self.position = (np.random.randint(25, 175), np.random.randint(25, 175))
-        # self.position = (100, 45)
+        # self.position = (np.random.randint(25, 175), np.random.randint(25, 175))
+        self.position = (100, 45)
         self.shape = pymunk.Circle(self, 5)
         self.shape.friction = 0.6
 
@@ -47,36 +43,37 @@ class Gripper(pymunk.Body):
 
 
 class Gripper2DEnv(gym.Env):
+
     metadata = {'render.modes': ['human', 'rgb_array']}
 
     def __init__(self):
 
-        self._actions = (0, 1, 2, 3, 4, 5)
         self.score = 0.0  # required.
-        self.lives = 0  # required. Can be 0 or -1 if not required.
         self.screen = None  # must be set to None
         self.clock = None  # must be set to None
         self.height = 200
         self.width = 200
         self.screen_dim = (self.width, self.height)  # width and height
-        self.allowed_fps = None  # fps that the game is allowed to run at.
-        self.NOOP = K_F15  # the noop key
 
         self.seed()
 
+        self._actions = (0, 1, 2, 3, 4, 5)
         self.action_space = spaces.Discrete(len(self._actions))
+
         self.observation_space = spaces.Box(low=0, high=255,
                                             shape=(self.width, self.height, 3),
                                             dtype=np.uint8)
 
+        # Parameters
         self.rewards = {
             "nothing": -1,
             "out": -5,
-            "win": 5
+            "close": 0,
+            "win": 10
         }
 
-        self.gripper_velocity = 10
-        self.gripper_angular_velocity = 5
+        self.gripper_velocity = 12
+        self.gripper_angular_velocity = 3
 
     def reset(self):
         """Resets the state of the environment and returns an initial observation.
@@ -96,7 +93,7 @@ class Gripper2DEnv(gym.Env):
         self.gripper = Gripper(self.space)
 
         # TODO think of step size
-        # self.space.step(1/pymunk.inf)
+        # self.space.step(1 / pymunk.inf)
         self.space.step(1 / 60)
 
         self.screen.fill((255, 255, 255))
@@ -107,7 +104,7 @@ class Gripper2DEnv(gym.Env):
 
         return self._get_observation()
 
-    def step(self, a):
+    def step(self, action):
         """Run one timestep of the environment's dynamics. When end of
         episode is reached, you are responsible for calling `reset()`
         to reset this environment's state.
@@ -121,8 +118,7 @@ class Gripper2DEnv(gym.Env):
             info (dict): contains auxiliary diagnostic information (helpful for debugging, and sometimes learning)
         """
 
-        reward = 0.
-        action = self._actions[a]
+        reward = 0.0
 
         num_steps = np.random.randint(2, 5)
 
@@ -132,17 +128,35 @@ class Gripper2DEnv(gym.Env):
                 self._gripper_action(action)
                 # steps to tune
                 self.space.step(1 / 60)
-            else:
-                self.close()
 
         observation = self._get_observation()
 
         done = self._get_reward_done()[1]
 
+        self.screen.fill((255, 255, 255))
+
+        pygame.draw.rect(self.screen, (0, 0, 0), [20, 20, 160, 160])
+
+        self.space.debug_draw(self.draw_options)
+
+        pygame.display.flip()
+
         self.gripper.velocity = (0, 0)
         self.gripper.angular_velocity = 0
 
-        return observation, reward, done, {}
+        self.circle.velocity = self.slowing_circle()
+
+        if done:
+            self.reset()
+
+        info = {'gripper_x': self.gripper.position.x,
+                'gripper_y': self.gripper.position.y,
+                'gripper_angle': self.gripper.angle,
+                'circle_x': self.circle.position.x,
+                'circle_y': self.circle.position.y,
+                'gripper_velocity': self.gripper.velocity}
+
+        return observation, reward, done, info
 
     def render(self, mode='human'):
         """Renders the environment.
@@ -166,16 +180,18 @@ class Gripper2DEnv(gym.Env):
             close (bool): close all open renderings
         """
 
-        if mode == 'human':
-            self.screen.fill((255, 255, 255))
+        # TODO change from pygame to pyglet
 
-            pygame.draw.rect(self.screen, (0, 0, 0), [20, 20, 160, 160])
+        # if mode == 'human':
+            # self.screen.fill((255, 255, 255))
+            #
+            # pygame.draw.rect(self.screen, (0, 0, 0), [20, 20, 160, 160])
+            #
+            # self.space.debug_draw(self.draw_options)
+            #
+            # pygame.display.flip()
 
-            self.space.debug_draw(self.draw_options)
-
-            pygame.display.flip()
-
-        elif mode == 'rgb_array':
+        if mode == 'rgb_array':
 
             return self._get_observation()
 
@@ -217,26 +233,53 @@ class Gripper2DEnv(gym.Env):
             self.gripper.velocity = (0, self.gripper_velocity)
         elif action == 3:
             self.gripper.velocity = (0, -self.gripper_velocity)
-        if action == 4:
+        elif action == 4:
             self.gripper.angular_velocity -= self.gripper_angular_velocity
         elif action == 5:
             self.gripper.angular_velocity += self.gripper_angular_velocity
+        elif action == 6:
+            pass
 
     def _get_reward_done(self):
         radius = self.circle.shape.radius
+        reward = 0.0
+        done = False
 
         if self.circle.position.x < 20 - radius \
                 or self.circle.position.x > 180 + radius \
                 or self.circle.position.y < 20 - radius \
                 or self.circle.position.y > 180 + radius:
-            return self.rewards["win"], True
+            reward += self.rewards["win"]
+            done = True
         elif self.gripper.position.x < 4 \
                 or self.gripper.position.x > 196 \
                 or self.gripper.position.y < 4 \
                 or self.gripper.position.y > 196:
-            return self.rewards["out"], False
+            reward += self.rewards["out"]
+        elif abs(self.gripper.position.x - self.circle.position.x) < 30 \
+                and abs(self.gripper.position.y - self.circle.position.y) < 30:
+            reward += self.rewards["close"]
         else:
-            return self.rewards["nothing"], False
+            reward += self.rewards["nothing"]
+
+        return reward, done
+
+    def slowing_circle(self):
+
+        x_circ_vel, y_circ_vel = self.circle.velocity
+
+        if x_circ_vel < 0:
+            x_circ_vel *= .95
+        elif x_circ_vel > 0:
+            x_circ_vel *= .95
+
+        if y_circ_vel < 0:
+            y_circ_vel *= .95
+        elif y_circ_vel > 0:
+            y_circ_vel *= .95
+
+        return x_circ_vel, y_circ_vel
+
 
 ACTION_MEANING = {
     0: "LEFT",
