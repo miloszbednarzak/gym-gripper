@@ -1,7 +1,8 @@
+import sys
+sys.path.append('./gym_gripper')
+
 import gym
 import gym_gripper
-import os
-os.path()
 import random
 import numpy as np
 import tensorflow as tf
