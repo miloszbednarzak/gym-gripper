@@ -16,8 +16,8 @@ class Circle(pymunk.Body):
 
     def __init__(self, space):
         super().__init__(1, pymunk.inf)
-        # self.position = (np.random.randint(25, 175), np.random.randint(25, 175))
-        self.position = (100, 45)
+        self.position = (np.random.randint(25, 175), np.random.randint(25, 175))
+        # self.position = (100, 45)
         self.shape = pymunk.Circle(self, 5)
         self.shape.friction = 0.6
 
@@ -72,6 +72,7 @@ class Gripper2DEnv(gym.Env):
             "win": 10
         }
 
+        self.step_num = 0
         self.gripper_velocity = 12
         self.gripper_angular_velocity = 3
 
@@ -80,8 +81,10 @@ class Gripper2DEnv(gym.Env):
         Returns: observation (object): the initial observation of the space.
         """
         pygame.init()
-        pygame.display.set_caption("Gripper2D")
-        self.screen = pygame.display.set_mode(self.screen_dim, 0, 32)
+        # pygame.display.set_caption("Gripper2D")
+        # self.screen = pygame.display.set_mode(self.screen_dim, 0, 32)
+
+        self.screen = pygame.Surface((self.width, self.height))
         self.clock = pygame.time.Clock()
 
         self.space = pymunk.Space()
@@ -102,7 +105,9 @@ class Gripper2DEnv(gym.Env):
 
         self.space.debug_draw(self.draw_options)
 
-        return self._get_observation()
+        # return self._get_observation()
+        return pygame.surfarray.array3d(
+            self.screen).astype(np.uint8)
 
     def step(self, action):
         """Run one timestep of the environment's dynamics. When end of
@@ -121,6 +126,7 @@ class Gripper2DEnv(gym.Env):
         reward = 0.0
 
         num_steps = np.random.randint(2, 5)
+        self.step_num += num_steps
 
         for _ in range(num_steps):
             if not self._get_reward_done()[1]:
@@ -146,7 +152,11 @@ class Gripper2DEnv(gym.Env):
 
         self.circle.velocity = self.slowing_circle()
 
+        if self.step_num > 2000:
+            done = True
+
         if done:
+            self.close()
             self.reset()
 
         info = {'gripper_x': self.gripper.position.x,
@@ -182,16 +192,29 @@ class Gripper2DEnv(gym.Env):
 
         # TODO change from pygame to pyglet
 
-        # if mode == 'human':
-            # self.screen.fill((255, 255, 255))
-            #
-            # pygame.draw.rect(self.screen, (0, 0, 0), [20, 20, 160, 160])
-            #
-            # self.space.debug_draw(self.draw_options)
-            #
-            # pygame.display.flip()
+        if mode == 'human':
+
+            pygame.display.set_caption("Gripper2D")
+            self.screen = pygame.display.set_mode(self.screen_dim, 0, 32)
+
+            self.draw_options = pymunk.pygame_util.DrawOptions(self.screen)
+
+            self.screen.fill((255, 255, 255))
+
+            pygame.draw.rect(self.screen, (0, 0, 0), [20, 20, 160, 160])
+
+            self.space.debug_draw(self.draw_options)
+
+            pygame.display.flip()
 
         if mode == 'rgb_array':
+            self.screen.fill((255, 255, 255))
+
+            pygame.draw.rect(self.screen, (0, 0, 0), [20, 20, 160, 160])
+
+            self.space.debug_draw(self.draw_options)
+
+            pygame.display.flip()
 
             return self._get_observation()
 
@@ -200,7 +223,7 @@ class Gripper2DEnv(gym.Env):
         Environments will automatically close() themselves when
         garbage collected or when the program exits.
         """
-        sys.exit(0)
+        pygame.quit()
 
     def seed(self, seed=None):
         """Sets the seed for this env's random number generator(s).
