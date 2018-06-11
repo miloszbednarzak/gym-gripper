@@ -1,12 +1,10 @@
 import gym
-from gym import spaces, utils
+from gym import spaces
 from gym.utils import seeding
 
 import pygame
-from pygame.locals import *
 import pymunk
 import pymunk.pygame_util
-from pymunk import Vec2d
 
 import sys
 import numpy as np
@@ -95,8 +93,6 @@ class Gripper2DEnv(gym.Env):
 
         self.gripper = Gripper(self.space)
 
-        # TODO think of step size
-        # self.space.step(1 / pymunk.inf)
         self.space.step(1 / 60)
 
         self.screen.fill((255, 255, 255))
@@ -105,7 +101,6 @@ class Gripper2DEnv(gym.Env):
 
         self.space.debug_draw(self.draw_options)
 
-        # return self._get_observation()
         return pygame.surfarray.array3d(
             self.screen).astype(np.uint8)
 
@@ -119,7 +114,8 @@ class Gripper2DEnv(gym.Env):
         Returns:
             observation (object): agent's observation of the current environment
             reward (float) : amount of reward returned after previous action
-            done (boolean): whether the episode has ended, in which case further step() calls will return undefined results
+            done (boolean): whether the episode has ended, in which case further step()
+                calls will return undefined results
             info (dict): contains auxiliary diagnostic information (helpful for debugging, and sometimes learning)
         """
 
@@ -191,8 +187,6 @@ class Gripper2DEnv(gym.Env):
             mode (str): the mode to render with
             close (bool): close all open renderings
         """
-
-        # TODO change from pygame to pyglet
 
         if mode == 'human':
 
