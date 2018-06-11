@@ -5,5 +5,8 @@ setup(name='gym_gripper',
       install_requires=['gym',
                         'pygame',
                         'numpy',
-                        'pymunk', 'keras', 'scikit-image', 'baselines']
+                        'pymunk',
+                        'keras',
+                        'scikit-image',
+                        'tensorflow']
       )

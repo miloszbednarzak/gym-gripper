@@ -144,7 +144,7 @@ class DQNAgent:
                 target[i] = reward[i]
             else:
                 target[i] = reward[i] + self.discount_factor * \
-                                        np.amax(target_value[i])
+                            np.amax(target_value[i])
 
         loss = self.optimizer([history, action, target])
         self.avg_loss += loss[0]
