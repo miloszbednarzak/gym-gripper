@@ -11,7 +11,7 @@ from skimage.color import rgb2gray
 from skimage.transform import resize
 from keras.models import Sequential
 from keras.optimizers import RMSprop
-from keras.layers import Dense, Flatten, Conv2D, BatchNormalization
+from keras.layers import Dense, Flatten, Conv2D, BatchNormalization, Activation
 from keras import backend as K
 
 EPISODES = 150000
@@ -83,11 +83,13 @@ class DQNAgent:
     # state is input and Q Value of each action is output of network
     def build_model(self):
         model = Sequential()
-        model.add(Conv2D(32, (8, 8), strides=(4, 4), activation='relu',
+        model.add(Conv2D(32, (8, 8), strides=(4, 4),
                          input_shape=self.state_size))
         model.add(BatchNormalization())
-        model.add(Conv2D(64, (4, 4), strides=(2, 2), activation='relu'))
+        model.add(Activation('relu'))
+        model.add(Conv2D(64, (4, 4), strides=(2, 2)))
         model.add(BatchNormalization())
+        model.add(Activation('relu'))
         model.add(Conv2D(64, (3, 3), strides=(1, 1), activation='relu'))
         model.add(Flatten())
         model.add(Dense(512, activation='relu'))
