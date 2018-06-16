@@ -22,7 +22,7 @@ global episode
 episode = 0
 EPISODES = 8000000
 
-env_name = "'Gripper2D-v0'"
+env_name = 'Gripper2D-v0'
 
 
 # In this example, we use A3C algorithm
