@@ -8,15 +8,15 @@ env.reset()
 
 scores, episodes, global_step = [], [], 0
 
-for episode in range(3):
+for episode in range(30):
     done = False
     step, score = 0, 0
     observe = env.reset()
+    print(episode)
 
     while not done:
         env.render()
         observe, reward, done, info = env.step(env.action_space.sample())
-
         score += reward
 
         if done:

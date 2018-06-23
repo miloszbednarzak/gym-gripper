@@ -1,6 +1,3 @@
-import sys
-sys.path.append('./gym_gripper')
-
 import gym
 import gym_gripper
 import random
@@ -17,29 +14,30 @@ from keras import backend as K
 EPISODES = 150000
 
 
-class DQNAgent:
+class DQN:
     def __init__(self, action_size):
-        self.render = False
+        self.visualize = False
         self.load_model = False
-        # environment settings
-        self.state_size = (84, 84, 4)
+
         self.action_size = action_size
-        # parameters about epsilon
+        self.state_size = (84, 84, 4)
+
         self.epsilon = 1.
-        self.epsilon_start, self.epsilon_end = 1.0, 0.1
-        self.exploration_steps = 1000000.
-        self.epsilon_decay_step = (self.epsilon_start - self.epsilon_end) \
+        self.epsilon_begin = 1.0
+        self.epsilon_end = 0.1
+        self.exploration_steps = 1000000
+        self.epsilon_decay_step = (self.epsilon_begin - self.epsilon_end) \
                                   / self.exploration_steps
-        # parameters about training
-        self.batch_size = 32
-        self.train_start = 50000
-        self.update_target_rate = 10000
-        self.discount_factor = 0.99
+
+        self.train_begin = 50000
+        self.update_target_interval = 10000
         self.memory = deque(maxlen=400000)
-        self.no_op_steps = 30
-        # build model
-        self.model = self.build_model()
-        self.target_model = self.build_model()
+        self.lazy_steps = 30
+        self.batch_size = 32
+        self.discount_factor = 0.99
+
+        self.model = self.make_model()
+        self.target_model = self.make_model()
         self.update_target_model()
 
         self.optimizer = self.optimizer()
@@ -47,9 +45,10 @@ class DQNAgent:
         self.sess = tf.InteractiveSession()
         K.set_session(self.sess)
 
-        self.avg_q_max, self.avg_loss = 0, 0
+        self.avg_q_max = 0
+        self.avg_loss = 0
         self.summary_placeholders, self.update_ops, self.summary_op = \
-            self.setup_summary()
+            self.graph_summary()
         self.summary_writer = tf.summary.FileWriter(
             'summary/gripper_dqn', self.sess.graph)
         self.sess.run(tf.global_variables_initializer())
@@ -57,8 +56,6 @@ class DQNAgent:
         if self.load_model:
             self.model.load_weights("./save_model/gripper_dqn.h5")
 
-    # if the error is in [-1, 1], then the cost is quadratic to the error
-    # But outside the interval, the cost is linear to the error
     def optimizer(self):
         a = K.placeholder(shape=(None,), dtype='int32')
         y = K.placeholder(shape=(None,), dtype='float32')
@@ -79,9 +76,7 @@ class DQNAgent:
 
         return train
 
-    # approximate Q function using Convolution Neural Network
-    # state is input and Q Value of each action is output of network
-    def build_model(self):
+    def make_model(self):
         model = Sequential()
         model.add(Conv2D(32, (8, 8), strides=(4, 4),
                          input_shape=self.state_size))
@@ -97,77 +92,73 @@ class DQNAgent:
         model.summary()
         return model
 
-    # after some time interval update the target model to be same with model
-    def update_target_model(self):
-        self.target_model.set_weights(self.model.get_weights())
-
-    # get action from model using epsilon-greedy policy
-    def get_action(self, history):
-        history = np.float32(history / 255.0)
+    def epsilon_greedy(self, history_):
+        history_ = np.float32(history_ / 255.0)
         if np.random.rand() <= self.epsilon:
             return random.randrange(self.action_size)
         else:
-            q_value = self.model.predict(history)
+            q_value = self.model.predict(history_)
             return np.argmax(q_value[0])
 
-    # save sample <s,a,r,s'> to the replay memory
-    def replay_memory(self, history, action, reward, next_history, dead):
-        self.memory.append((history, action, reward, next_history, dead))
+    def replay_memory(self, hist, act, rew, next_hist, terminal):
+        self.memory.append((hist, act, rew, next_hist, terminal))
 
-    # pick samples randomly from replay memory (with batch_size)
     def train_replay(self):
-        if len(self.memory) < self.train_start:
+        if len(self.memory) < self.train_begin:
             return
         if self.epsilon > self.epsilon_end:
             self.epsilon -= self.epsilon_decay_step
 
         mini_batch = random.sample(self.memory, self.batch_size)
 
-        history = np.zeros((self.batch_size, self.state_size[0],
-                            self.state_size[1], self.state_size[2]))
-        next_history = np.zeros((self.batch_size, self.state_size[0],
-                                 self.state_size[1], self.state_size[2]))
+        replay_history = np.zeros((self.batch_size, self.state_size[0],
+                                   self.state_size[1], self.state_size[2]))
+
+        repl_next_history = np.zeros((self.batch_size, self.state_size[0],
+                                      self.state_size[1], self.state_size[2]))
+
         target = np.zeros((self.batch_size,))
-        action, reward, dead = [], [], []
+        replay_action, replay_reward, terminal = [], [], []
 
         for i in range(self.batch_size):
-            history[i] = np.float32(mini_batch[i][0] / 255.)
-            next_history[i] = np.float32(mini_batch[i][3] / 255.)
-            action.append(mini_batch[i][1])
-            reward.append(mini_batch[i][2])
-            dead.append(mini_batch[i][4])
+            replay_history[i] = np.float32(mini_batch[i][0] / 255.)
+            repl_next_history[i] = np.float32(mini_batch[i][3] / 255.)
+            replay_action.append(mini_batch[i][1])
+            replay_reward.append(mini_batch[i][2])
+            terminal.append(mini_batch[i][4])
 
-        target_value = self.target_model.predict(next_history)
+        target_value = self.target_model.predict(repl_next_history)
 
-        # like Q Learning, get maximum Q value at s'
-        # But from target model
         for i in range(self.batch_size):
-            if dead[i]:
-                target[i] = reward[i]
+            if terminal[i]:
+                target[i] = replay_reward[i]
             else:
-                target[i] = reward[i] + self.discount_factor * \
+                target[i] = replay_reward[i] + self.discount_factor * \
                             np.amax(target_value[i])
 
-        loss = self.optimizer([history, action, target])
+        loss = self.optimizer([replay_history, replay_action, target])
         self.avg_loss += loss[0]
+
+    def update_target_model(self):
+        self.target_model.set_weights(self.model.get_weights())
 
     def save_model(self, name):
         self.model.save_weights(name)
 
-    # make summary operators for tensorboard
-    def setup_summary(self):
-        episode_total_reward = tf.Variable(0.)
-        episode_avg_max_q = tf.Variable(0.)
-        episode_duration = tf.Variable(0.)
-        episode_avg_loss = tf.Variable(0.)
+    @staticmethod
+    def graph_summary():
+        ep_total_reward = tf.Variable(0.)
+        ep_avg_max_q = tf.Variable(0.)
+        ep_duration = tf.Variable(0.)
+        ep_avg_loss = tf.Variable(0.)
 
-        tf.summary.scalar('Total Reward/Episode', episode_total_reward)
-        tf.summary.scalar('Average Max Q/Episode', episode_avg_max_q)
-        tf.summary.scalar('Duration/Episode', episode_duration)
-        tf.summary.scalar('Average Loss/Episode', episode_avg_loss)
+        tf.summary.scalar('Total Reward/Episode', ep_total_reward)
+        tf.summary.scalar('Average Max Q/Episode', ep_avg_max_q)
+        tf.summary.scalar('Duration/Episode', ep_duration)
+        tf.summary.scalar('Average Loss/Episode', ep_avg_loss)
 
-        summary_vars = [episode_total_reward, episode_avg_max_q,
-                        episode_duration, episode_avg_loss]
+        summary_vars = [ep_total_reward, ep_avg_max_q,
+                        ep_duration, ep_avg_loss]
         summary_placeholders = [tf.placeholder(tf.float32) for _ in
                                 range(len(summary_vars))]
         update_ops = [summary_vars[i].assign(summary_placeholders[i]) for i in
@@ -176,50 +167,44 @@ class DQNAgent:
         return summary_placeholders, update_ops, summary_op
 
 
-# 210*160*3(color) --> 84*84(mono)
-# float --> integer (to reduce the size of replay memory)
-def pre_processing(observe):
-    processed_observe = np.uint8(
-        resize(rgb2gray(observe), (84, 84), mode='constant') * 255)
-    return processed_observe
+def preprocessing(observation):
+    processed_observation = np.uint8(
+        resize(rgb2gray(observation), (84, 84), mode='constant') * 255)
+    return processed_observation
 
 
 if __name__ == "__main__":
 
     env = gym.make('Gripper2D-v0')
-    agent = DQNAgent(action_size=6)
+    agent = DQN(action_size=6)
 
     scores, episodes, global_step = [], [], 0
 
-    for e in range(EPISODES):
+    for episode in range(EPISODES):
         done = False
-        # 1 episode = 5 lives
-        step, score = 0, 0
+
+        step = 0
+        return_ = 0
         observe = env.reset()
 
-        # this is one of DeepMind's idea.
-        # just do nothing at the start of episode to avoid sub-optimal
-        for _ in range(random.randint(1, agent.no_op_steps)):
+        for _ in range(random.randint(1, agent.lazy_steps)):
             observe, _, _, _ = env.step(6)
 
-        # At start of episode, there is no preceding frame
-        # So just copy initial states to make history
-        state = pre_processing(observe)
+        state = preprocessing(observe)
         history = np.stack((state, state, state, state), axis=2)
         history = np.reshape([history], (1, 84, 84, 4))
 
         while not done:
-            if agent.render:
+            if agent.visualize:
                 env.render()
-            global_step += 1
             step += 1
+            global_step += 1
 
-            # get action for the current history and go one step in environment
-            action = agent.get_action(history)
+            action = agent.epsilon_greedy(history)
 
             observe, reward, done, info = env.step(action)
-            # pre-process the observation --> history
-            next_state = pre_processing(observe)
+
+            next_state = preprocessing(observe)
             next_state = np.reshape([next_state], (1, 84, 84, 1))
             next_history = np.append(next_state, history[:, :, :, :3], axis=3)
 
@@ -228,37 +213,35 @@ if __name__ == "__main__":
 
             reward = np.clip(reward, -1., 1.)
 
-            # save the sample <s, a, r, s'> to the replay memory
             agent.replay_memory(history, action, reward, next_history, done)
-            # every some time interval, train model
+
             agent.train_replay()
-            # update the target model with model
-            if global_step % agent.update_target_rate == 0:
+
+            if global_step % agent.update_target_interval == 0:
                 agent.update_target_model()
 
-            score += reward
+            return_ += reward
 
             history = next_history
 
-            # if done, plot the score over episodes
             if done:
-                if global_step > agent.train_start:
-                    stats = [score, agent.avg_q_max / float(step), step,
+                print("episode:", episode, "  return_:", return_, "  memory length:",
+                      len(agent.memory), "  epsilon:", agent.epsilon,
+                      "  global_step:", global_step, "  average_q:",
+                      agent.avg_q_max / float(step), "  average loss:",
+                      agent.avg_loss / float(step))
+
+                if global_step > agent.train_begin:
+                    stats = [return_, agent.avg_q_max / float(step), step,
                              agent.avg_loss / float(step)]
                     for i in range(len(stats)):
                         agent.sess.run(agent.update_ops[i], feed_dict={
                             agent.summary_placeholders[i]: float(stats[i])
                         })
                     summary_str = agent.sess.run(agent.summary_op)
-                    agent.summary_writer.add_summary(summary_str, e + 1)
-
-                print("episode:", e, "  score:", score, "  memory length:",
-                      len(agent.memory), "  epsilon:", agent.epsilon,
-                      "  global_step:", global_step, "  average_q:",
-                      agent.avg_q_max / float(step), "  average loss:",
-                      agent.avg_loss / float(step))
+                    agent.summary_writer.add_summary(summary_str, episode + 1)
 
                 agent.avg_q_max, agent.avg_loss = 0, 0
 
-        if e % 1000 == 0:
-            agent.model.save_weights(f"gripper_dqn_{e}.h5")
+        if episode % 1000 == 0:
+            agent.model.save_weights(f"gripper_dqn_{episode}.h5")
